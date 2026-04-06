@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -49,7 +50,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SavingCircle",
       "type": "object",
-      "description": "Represents a collective saving circle (Círculo de Ahorro) with specific financial parameters, managed by an administrator.",
+      "description": "Represents a collective saving circle (Círculo de Ahorro) with specific financial parameters in USD.",
       "properties": {
         "id": {
           "type": "string",
@@ -57,76 +58,64 @@
         },
         "name": {
           "type": "string",
-          "description": "The name of the saving circle, displayed to users."
+          "description": "The name of the saving circle."
         },
         "description": {
           "type": "string",
-          "description": "A detailed description of the saving circle, outlining its purpose, rules, and benefits."
+          "description": "A detailed description of the saving circle."
         },
         "adminUserId": {
           "type": "string",
-          "description": "Reference to the User who administers and configures this saving circle. (Relationship: User 1:N SavingCircle)"
+          "description": "Reference to the Admin User."
         },
         "targetCapital": {
           "type": "number",
-          "description": "The total capital to be collected by the saving circle (Capital suscripto), which must be a multiple of 5000 USD."
+          "description": "Capital suscripto (multiplo de 5000 USD)."
         },
         "totalInstallments": {
           "type": "number",
-          "description": "The total number of monthly installments (Cuotas) for the saving circle, configurable as a multiple of 12."
+          "description": "Cantidad de cuotas (multiplo de 12)."
         },
         "installmentValue": {
           "type": "number",
-          "description": "The base value of each principal installment (Alicuota), calculated as targetCapital / totalInstallments."
+          "description": "Alicuota (capital / cuotas)."
         },
         "subscriptionFeeRate": {
           "type": "number",
-          "description": "The percentage rate for the subscription fee (Derecho de suscripción), configurable by the administrator between 1% and 10% (0.01-0.10)."
+          "description": "Derecho de suscripción (0.01-0.10)."
         },
         "administrativeFeeRate": {
           "type": "number",
-          "description": "The percentage rate for the administrative fee (Gasto administrativo), configurable by the administrator between 1% and 10% (0.01-0.10)."
+          "description": "Gasto administrativo (0.01-0.10)."
         },
         "lifeInsuranceRate": {
           "type": "number",
-          "description": "The percentage rate for the life insurance premium (Seguro de vida), fixed at 0.09% (0.0009)."
+          "description": "Seguro de vida (fijo 0.0009)."
         },
         "drawMethodCount": {
           "type": "number",
-          "description": "The number of members to be adjudicated by draw (sorteo) per adjudication round, configurable between 1 and 5."
+          "description": "Adjudicaciones por sorteo por ronda (1-5)."
         },
         "bidMethodCount": {
           "type": "number",
-          "description": "The number of members to be adjudicated by bid (licitación) per adjudication round, configurable between 1 and 5."
+          "description": "Adjudicaciones por licitación por ronda (1-5)."
         },
         "memberCapacity": {
           "type": "number",
-          "description": "The total number of members that can join this saving circle, calculated as drawMethodCount + bidMethodCount."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The official start date and time of the saving circle's operation. (Format: date-time)",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "The projected end date and time of the saving circle, based on its total installments. (Format: date-time)",
-          "format": "date-time"
+          "description": "Total miembros = cuotas * (sorteo + licitacion)."
         },
         "status": {
           "type": "string",
-          "description": "The current operational status of the saving circle (e.g., 'Pending', 'Active', 'Completed', 'Cancelled')."
+          "enum": ["Pending", "Active", "Completed", "Cancelled"]
         },
         "creationDate": {
           "type": "string",
-          "description": "The date and time when this saving circle was created in the system. (Format: date-time)",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "name",
-        "description",
         "adminUserId",
         "targetCapital",
         "totalInstallments",
@@ -137,8 +126,6 @@
         "drawMethodCount",
         "bidMethodCount",
         "memberCapacity",
-        "startDate",
-        "endDate",
         "status",
         "creationDate"
       ]
@@ -147,58 +134,17 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SavingCircleMembership",
       "type": "object",
-      "description": "Represents a user's individual subscription and ongoing participation in a specific saving circle, tracking their progress and status.",
+      "description": "User's individual subscription and progress.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the SavingCircleMembership entity."
-        },
-        "userId": {
-          "type": "string",
-          "description": "Reference to the User participating in this saving circle. (Relationship: User 1:N SavingCircleMembership)"
-        },
-        "savingCircleId": {
-          "type": "string",
-          "description": "Reference to the SavingCircle this membership belongs to. (Relationship: SavingCircle 1:N SavingCircleMembership)"
-        },
-        "joiningDate": {
-          "type": "string",
-          "description": "The date and time when the user joined this specific saving circle. (Format: date-time)",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the user's membership (e.g., 'Active', 'Adjudicated', 'Withdrawn', 'Completed')."
-        },
-        "paidInstallmentsCount": {
-          "type": "number",
-          "description": "The total number of principal installments (alícuotas) paid by this member to date."
-        },
-        "capitalPaid": {
-          "type": "number",
-          "description": "The cumulative amount of principal capital (alícuotas) paid by this member to date."
-        },
-        "outstandingCapitalBalance": {
-          "type": "number",
-          "description": "The remaining capital balance (Saldo de capital) for this member, calculated as SavingCircle.targetCapital - capitalPaid."
-        },
-        "adjudicationStatus": {
-          "type": "string",
-          "description": "Indicates if and how the member has been adjudicated (e.g., 'Not Adjudicated', 'Adjudicated by Draw', 'Adjudicated by Bid')."
-        },
-        "adjudicationDate": {
-          "type": "string",
-          "description": "The date and time when this member was adjudicated and received capital. (Optional, Format: date-time)",
-          "format": "date-time"
-        },
-        "adjudicationAmountReceived": {
-          "type": "number",
-          "description": "The amount of principal capital received by the member upon adjudication. (Optional)"
-        },
-        "adjudicationInstallmentNumber": {
-          "type": "number",
-          "description": "The installment number during which the member was adjudicated. (Optional)"
-        }
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "savingCircleId": { "type": "string" },
+        "joiningDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string" },
+        "paidInstallmentsCount": { "type": "number" },
+        "capitalPaid": { "type": "number" },
+        "outstandingCapitalBalance": { "type": "number", "description": "Saldo de capital: Capital Suscripto - alicuotas pagas." },
+        "adjudicationStatus": { "type": "string" }
       },
       "required": [
         "id",
@@ -216,58 +162,20 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Payment",
       "type": "object",
-      "description": "Records individual monthly payments made by a user towards their saving circle membership, including all fee components.",
+      "description": "Detailed payment record including all fees.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Payment entity."
-        },
-        "savingCircleMembershipId": {
-          "type": "string",
-          "description": "Reference to the SavingCircleMembership this payment belongs to. (Relationship: SavingCircleMembership 1:N Payment)"
-        },
-        "installmentNumber": {
-          "type": "number",
-          "description": "The sequential number of the installment this payment covers (e.g., 1st, 2nd, up to totalInstallments)."
-        },
-        "paymentDate": {
-          "type": "string",
-          "description": "The date and time when the payment was successfully processed. (Format: date-time)",
-          "format": "date-time"
-        },
-        "baseInstallmentAmountComponent": {
-          "type": "number",
-          "description": "The portion of the payment corresponding to the principal (alícuota)."
-        },
-        "subscriptionFeeComponent": {
-          "type": "number",
-          "description": "The portion of the payment corresponding to the monthly allocated subscription fee."
-        },
-        "administrativeFeeComponent": {
-          "type": "number",
-          "description": "The portion of the payment corresponding to the monthly allocated administrative fee."
-        },
-        "lifeInsuranceComponent": {
-          "type": "number",
-          "description": "The portion of the payment corresponding to the monthly allocated life insurance premium."
-        },
-        "latePaymentInterestAmount": {
-          "type": "number",
-          "description": "The amount of interest charged for late payment (interés por mora), if applicable. (Optional)"
-        },
-        "totalPaidAmount": {
-          "type": "number",
-          "description": "The total amount paid in this transaction, summing all components."
-        },
-        "status": {
-          "type": "string",
-          "description": "The status of the payment (e.g., 'Paid', 'Overdue', 'Partially Paid', 'Refunded')."
-        },
-        "dueDate": {
-          "type": "string",
-          "description": "The original due date for this specific installment. (Format: date-time)",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "savingCircleMembershipId": { "type": "string" },
+        "installmentNumber": { "type": "number" },
+        "paymentDate": { "type": "string", "format": "date-time" },
+        "baseInstallmentAmountComponent": { "type": "number", "description": "Alicuota pura." },
+        "subscriptionFeeComponent": { "type": "number" },
+        "administrativeFeeComponent": { "type": "number" },
+        "lifeInsuranceComponent": { "type": "number" },
+        "latePaymentInterestAmount": { "type": "number" },
+        "totalPaidAmount": { "type": "number", "description": "Cuota total pagada." },
+        "status": { "type": "string" },
+        "dueDate": { "type": "string", "format": "date-time" }
       },
       "required": [
         "id",
@@ -281,88 +189,6 @@
         "totalPaidAmount",
         "status",
         "dueDate"
-      ]
-    },
-    "AdjudicationEvent": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "AdjudicationEvent",
-      "type": "object",
-      "description": "Records the details of each adjudication event (either draw or bid) that successfully awards capital within a saving circle.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the AdjudicationEvent entity."
-        },
-        "savingCircleId": {
-          "type": "string",
-          "description": "Reference to the SavingCircle where this adjudication occurred. (Relationship: SavingCircle 1:N AdjudicationEvent)"
-        },
-        "adjudicationDate": {
-          "type": "string",
-          "description": "The date and time when the adjudication event took place. (Format: date-time)",
-          "format": "date-time"
-        },
-        "adjudicationType": {
-          "type": "string",
-          "description": "The method of adjudication used (e.g., 'Draw' for sorteo, 'Bid' for licitación)."
-        },
-        "adjudicatedSavingCircleMembershipId": {
-          "type": "string",
-          "description": "Reference to the SavingCircleMembership that won this specific adjudication round. (Relationship: SavingCircleMembership 1:1 AdjudicationEvent)"
-        },
-        "adjudicationRound": {
-          "type": "number",
-          "description": "The sequential number indicating which monthly adjudication round this event represents within the saving circle's lifecycle."
-        },
-        "adjudicatedAmount": {
-          "type": "number",
-          "description": "The principal capital amount awarded to the winning member in this adjudication round."
-        }
-      },
-      "required": [
-        "id",
-        "savingCircleId",
-        "adjudicationDate",
-        "adjudicationType",
-        "adjudicatedSavingCircleMembershipId",
-        "adjudicationRound",
-        "adjudicatedAmount"
-      ]
-    },
-    "StaticContentPage": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "StaticContentPage",
-      "type": "object",
-      "description": "Stores static informational content pages for the application, such as 'How It Works' or 'FAQs', providing essential information to users.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the StaticContentPage entity."
-        },
-        "title": {
-          "type": "string",
-          "description": "The human-readable title of the content page (e.g., 'How It Works', 'Benefits')."
-        },
-        "slug": {
-          "type": "string",
-          "description": "A URL-friendly identifier for the page, typically used for navigation (e.g., 'how-it-works')."
-        },
-        "content": {
-          "type": "string",
-          "description": "The full content of the static page, which can be stored as HTML or Markdown."
-        },
-        "lastUpdated": {
-          "type": "string",
-          "description": "The date and time when the page content was last updated. (Format: date-time)",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "title",
-        "slug",
-        "content",
-        "lastUpdated"
       ]
     }
   },
@@ -378,131 +204,26 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores individual user profiles. Access is restricted to the owner (matching userId) and administrators. No special denormalization for authorization needed as the document ID directly represents the owner.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user, matching `request.auth.uid`."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/roles_admin/{userId}",
-        "definition": {
-          "entityName": "AdminRole",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Dedicated collection for administrative role assignment. Documents in this collection signify that the 'userId' is an administrator. Used for DBAC (Database Access Control) by checking document existence. Read by rules, write by system/other admins.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who holds an administrative role."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/User" },
+          "description": "User profiles."
         }
       },
       {
         "path": "/saving_circles/{savingCircleId}",
         "definition": {
           "entityName": "SavingCircle",
-          "schema": {
-            "$ref": "#/backend/entities/SavingCircle"
-          },
-          "description": "Contains details for each saving circle. Publicly readable for exploration by authenticated users. Writable only by an administrator. Includes 'adminUserId' for direct owner checks.",
-          "params": [
-            {
-              "name": "savingCircleId",
-              "description": "The unique identifier of the saving circle."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/SavingCircle" },
+          "description": "Saving circles configuration in USD."
         }
       },
       {
         "path": "/users/{userId}/saving_circle_memberships/{membershipId}",
         "definition": {
           "entityName": "SavingCircleMembership",
-          "schema": {
-            "$ref": "#/backend/entities/SavingCircleMembership"
-          },
-          "description": "Represents a user's participation in a saving circle. Nested under the user's path for easy querying of all memberships for a specific user. Includes denormalized 'savingCircleAdminUserId' and 'savingCircleName' from the parent 'SavingCircle' for authorization independence and UI display.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user owning this membership."
-            },
-            {
-              "name": "membershipId",
-              "description": "The unique identifier of the saving circle membership."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/saving_circle_memberships/{membershipId}/payments/{paymentId}",
-        "definition": {
-          "entityName": "Payment",
-          "schema": {
-            "$ref": "#/backend/entities/Payment"
-          },
-          "description": "Records individual payments made by a user for a specific membership. Nested under the user's membership for clear ownership. Includes denormalized 'savingCircleId', 'savingCircleAdminUserId', and 'savingCircleName' for authorization independence and simplified rule checks by both the user and the circle's administrator.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user who made the payment."
-            },
-            {
-              "name": "membershipId",
-              "description": "The unique identifier of the saving circle membership to which this payment belongs."
-            },
-            {
-              "name": "paymentId",
-              "description": "The unique identifier of the payment record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/saving_circles/{savingCircleId}/adjudication_events/{adjudicationEventId}",
-        "definition": {
-          "entityName": "AdjudicationEvent",
-          "schema": {
-            "$ref": "#/backend/entities/AdjudicationEvent"
-          },
-          "description": "Logs all adjudication events within a specific saving circle. Readable by all authenticated users (to show past results) and writable only by administrators. Includes denormalized 'savingCircleAdminUserId' for authorization independence.",
-          "params": [
-            {
-              "name": "savingCircleId",
-              "description": "The unique identifier of the saving circle where the adjudication occurred."
-            },
-            {
-              "name": "adjudicationEventId",
-              "description": "The unique identifier of the adjudication event."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/static_content_pages/{pageId}",
-        "definition": {
-          "entityName": "StaticContentPage",
-          "schema": {
-            "$ref": "#/backend/entities/StaticContentPage"
-          },
-          "description": "Stores static informational content pages (e.g., 'How It Works'). Publicly readable by all users (authenticated or not). Writable only by administrators.",
-          "params": [
-            {
-              "name": "pageId",
-              "description": "The unique identifier or slug of the static content page."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/SavingCircleMembership" },
+          "description": "User memberships and capital balance tracking."
         }
       }
-    ],
-    "reasoning": "The Firestore structure for 'Círculo de Ahorro' prioritizes Authorization Independence, Structural Segregation, and clear Access Modeling to ensure robust security rules and efficient query patterns. Authorization Independence is primarily achieved through strategic denormalization: key authorization fields from parent entities are copied into child documents wherever access to the child depends on the parent's attributes. For instance, `SavingCircleMembership` documents, although conceptually tied to a `SavingCircle`, are primarily owned by a `User`. Therefore, `savingCircleAdminUserId` and `savingCircleName` are denormalized into `SavingCircleMembership` to allow administrators to manage memberships associated with their circles without requiring `get()` operations on the parent `SavingCircle` document in security rules. Similarly, `Payment` documents denormalize `userId` (implicitly via path), `savingCircleId`, `savingCircleAdminUserId`, and `savingCircleName` to enable direct authorization checks by both the user and the circle's administrator.\n\nStructural Segregation is applied by nesting user-specific data like `SavingCircleMembership` and `Payment` under `/users/{userId}`. This creates homogeneous security postures: documents within a user's subcollections are primarily accessible by that user (the owner) or an administrator. Publicly discoverable entities like `SavingCircle` and `StaticContentPage` reside in root collections, simplifying rules for public read access. Admin roles are managed via an 'existence over content' model in `/roles_admin/{userId}`, allowing rules to check for administrative privileges without complex queries.\n\nThis design strongly supports Query-Aware Permissions (QAPs). For example:\n*   A user's personalized dashboard requiring a list of all their saving circle memberships is efficiently handled by querying `/users/{request.auth.uid}/saving_circle_memberships`. The `userId` in the path ensures that `request.auth.uid` directly matches the data ownership, fulfilling the QAP.\n*   Similarly, for listing a user's payments within a specific membership, `/users/{request.auth.uid}/saving_circle_memberships/{membershipId}/payments` allows for efficient and secure retrieval.\n*   The public browsing of available saving circles is supported by simply querying `/saving_circles`, where all documents share the 'publicly readable by authenticated users, writeable by admins' security posture.\n*   Adjudication events, which are visible to members of a circle, are stored under `/saving_circles/{savingCircleId}/adjudication_events`. By denormalizing `savingCircleAdminUserId` into these documents, administrative management is streamlined, while read access can be granted to all authenticated users for transparency without complex membership checks in rules. This design ensures that security rules are straightforward, atomic operations are unhindered, and data access aligns perfectly with application features while adhering to strong security principles."
+    ]
   }
 }

@@ -1,69 +1,65 @@
-import { Search, Filter, Users, Calendar, Target, ChevronRight } from "lucide-react"
+
+'use client';
+
+import { Search, Filter, Users, Calendar, Target, ChevronRight, Info } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import Link from "next/link"
 
 export default function ExplorePage() {
   const circles = [
     {
       id: "1",
-      name: "Viaje Grupal 2025",
-      description: "Ahorro colectivo para un viaje inolvidable a Europa el próximo año.",
-      target: 250000,
-      monthlyFee: 5000,
-      term: "12 meses",
-      members: 45,
-      maxMembers: 50,
-      category: "Viajes",
-    },
-    {
-      id: "2",
-      name: "Inversión Inmobiliaria Q3",
-      description: "Un círculo de alto capital para licitación de enganche de propiedades.",
-      target: 500000,
-      monthlyFee: 20000,
+      name: "Círculo Premium 50K",
+      description: "Ideal para inversión en capital de trabajo. Cuotas fijas en USD.",
+      target: 50000,
+      alicuota: 2083.33,
+      totalFee: 2350.00,
       term: "24 meses",
-      members: 12,
-      maxMembers: 25,
+      members: 45,
+      capacity: 48, // 24 meses * (1 sorteo + 1 licitacion)
       category: "Inversión",
     },
     {
-      id: "3",
-      name: "Renovación de Hogar",
-      description: "Ahorra paso a paso para mejorar tu espacio vital.",
-      target: 80000,
-      monthlyFee: 4000,
-      term: "10 meses",
-      members: 18,
-      maxMembers: 20,
-      category: "Hogar",
+      id: "2",
+      name: "Plan Vivienda 100K",
+      description: "Ahorro programado para anticipo de hipoteca sin intereses bancarios.",
+      target: 100000,
+      alicuota: 1666.67,
+      totalFee: 1890.00,
+      term: "60 meses",
+      members: 12,
+      capacity: 120,
+      category: "Vivienda",
     },
     {
-      id: "4",
-      name: "Educación Continua",
-      description: "Fondos para maestrías, diplomados o certificaciones internacionales.",
-      target: 120000,
-      monthlyFee: 6000,
-      term: "18 meses",
-      members: 8,
-      maxMembers: 15,
-      category: "Educación",
+      id: "3",
+      name: "Emprendedor 15K",
+      description: "Capital semilla para pequeños negocios. Adjudicaciones rápidas.",
+      target: 15000.00,
+      alicuota: 1250.00,
+      totalFee: 1420.00,
+      term: "12 meses",
+      members: 18,
+      capacity: 24,
+      category: "Negocios",
     }
   ]
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Explorar Círculos</h1>
-        <p className="text-muted-foreground">Encuentra el grupo perfecto que se adapte a tus metas financieras.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Explorar Círculos en USD</h1>
+        <p className="text-muted-foreground">Capital Suscripto en múltiplos de $5,000 con cuotas sin interés bancario.</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nombre, meta o categoría..." className="pl-10 bg-white border-border" />
+          <Input placeholder="Buscar por Capital Suscripto o cuota..." className="pl-10 bg-white border-border" />
         </div>
         <div className="flex items-center gap-2 w-full md:w-auto">
           <Button variant="outline" className="bg-white border-border gap-2">
@@ -76,15 +72,7 @@ export default function ExplorePage() {
         </div>
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
-        {["Todos", "Viajes", "Inversión", "Hogar", "Educación", "Salud", "Autos"].map((cat) => (
-          <Badge key={cat} variant={cat === "Todos" ? "default" : "secondary"} className="cursor-pointer px-4 py-1.5 hover:scale-105 transition-transform">
-            {cat}
-          </Badge>
-        ))}
-      </div>
-
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
         {circles.map((circle) => (
           <Card key={circle.id} className="group flex flex-col h-full border-none shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden bg-white">
             <div className="h-2 bg-primary w-full" />
@@ -95,7 +83,7 @@ export default function ExplorePage() {
                 </Badge>
                 <div className="flex items-center text-xs text-muted-foreground font-medium">
                   <Users className="h-3 w-3 mr-1" />
-                  {circle.members}/{circle.maxMembers}
+                  {circle.members}/{circle.capacity}
                 </div>
               </div>
               <CardTitle className="text-xl group-hover:text-primary transition-colors leading-tight">
@@ -109,29 +97,44 @@ export default function ExplorePage() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Meta Total</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Capital Suscripto</span>
                   <div className="flex items-center gap-1.5 font-bold text-foreground">
                     <Target className="h-3.5 w-3.5 text-primary" />
-                    ${circle.target.toLocaleString()}
+                    ${circle.target.toLocaleString()} USD
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Cuota Mensual</span>
-                  <div className="font-bold text-primary">
-                    ${circle.monthlyFee.toLocaleString()}
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Cuota Total</span>
+                  <div className="font-bold text-primary flex items-center gap-1">
+                    ${circle.totalFee.toLocaleString()}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs space-y-1">
+                          <p className="text-xs font-bold">Desglose mensual:</p>
+                          <p className="text-[10px]">Alícuota: ${circle.alicuota.toLocaleString()}</p>
+                          <p className="text-[10px]">Der. Suscripción + Gasto Adm. + Seguro</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-accent/30 p-2 rounded-lg">
-                <Calendar className="h-4 w-4 text-primary" />
-                <span className="font-medium">Plazo: {circle.term}</span>
+              <div className="flex items-center justify-between text-sm text-muted-foreground bg-accent/30 p-3 rounded-lg border border-primary/5">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Plazo: {circle.term}</span>
+                </div>
+                <span className="text-[10px] font-bold text-primary italic">Sin interés</span>
               </div>
             </CardContent>
             <CardFooter className="pt-2">
               <Button asChild className="w-full group/btn shadow-md hover:shadow-primary/20">
                 <Link href={`/explore/${circle.id}`} className="flex items-center justify-center">
-                  Ver Detalles
+                  Ver Plan Financiero
                   <ChevronRight className="ml-1 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
                 </Link>
               </Button>

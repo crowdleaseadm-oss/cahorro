@@ -1,37 +1,32 @@
-import { PiggyBank, TrendingUp, Users, Calendar, ArrowUpRight, Award } from "lucide-react"
+
+'use client';
+
+import { PiggyBank, TrendingUp, Users, Calendar, Award, DollarSign, ArrowUpRight } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import Link from "next/link"
 
 export default function Dashboard() {
   const activeCircles = [
     {
       id: "1",
-      name: "Círculo Emprendedores Q4",
-      target: 50000,
+      name: "Círculo Emprendedores 50K",
+      targetCapital: 50000,
       progress: 65,
       nextPayment: "2024-05-15",
-      fee: 2500,
+      alicuota: 2083.33,
+      totalFee: 2350,
+      balance: 17500, // Saldo de capital: lo que falta pagar de alicuotas
       status: "Al día",
-    },
-    {
-      id: "2",
-      name: "Plan Vivienda Joven",
-      target: 120000,
-      progress: 30,
-      nextPayment: "2024-05-20",
-      fee: 5000,
-      status: "Pendiente",
     }
   ]
 
   const history = [
-    { date: "15 Abr 2024", concept: "Cuota 6/12 - Emprendedores", amount: 2500, status: "Completado" },
-    { date: "20 Abr 2024", concept: "Cuota 4/24 - Plan Vivienda", amount: 5000, status: "Completado" },
-    { date: "15 Mar 2024", concept: "Cuota 5/12 - Emprendedores", amount: 2500, status: "Completado" },
+    { date: "15 Abr 2024", concept: "Cuota 6/24 - Alicuota + Gastos", amount: 2350, status: "Completado" },
+    { date: "15 Mar 2024", concept: "Cuota 5/24 - Alicuota + Gastos", amount: 2350, status: "Completado" },
   ]
 
   return (
@@ -39,101 +34,99 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Hola, Alejandro 👋</h1>
-          <p className="text-muted-foreground mt-1">Aquí tienes el resumen de tu progreso financiero.</p>
+          <p className="text-muted-foreground mt-1">Tu resumen financiero en USD.</p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="bg-white px-3 py-1 font-medium border-primary/20 text-primary">
-            Nivel Plata
+            Nivel Inversor
           </Badge>
           <Button asChild className="shadow-lg shadow-primary/20">
-            <Link href="/explore">Explorar nuevos grupos</Link>
+            <Link href="/explore">Nuevos Círculos</Link>
           </Button>
         </div>
       </div>
 
-      {/* Metrics Row */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-none shadow-sm bg-primary text-primary-foreground">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80">Total Ahorrado</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80">Capital Integrado</CardTitle>
             <TrendingUp className="h-4 w-4 opacity-80" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$72,500.00</div>
-            <p className="text-xs opacity-70 mt-1">+12% respecto al mes pasado</p>
+            <div className="text-2xl font-bold">$32,500.00</div>
+            <p className="text-xs opacity-70 mt-1">Monto en alícuotas puras</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Círculos Activos</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Saldo de Capital</CardTitle>
+            <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">2</div>
-            <p className="text-xs text-muted-foreground mt-1">Contribuyendo activamente</p>
+            <div className="text-2xl font-bold text-foreground">$17,500.00</div>
+            <p className="text-xs text-muted-foreground mt-1">Pendiente de suscripción</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Próximo Pago</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Próximo Vencimiento</CardTitle>
             <Calendar className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">15 May</div>
-            <p className="text-xs text-muted-foreground mt-1">$2,500.00 pendientes</p>
+            <p className="text-xs text-muted-foreground mt-1">Cuota total: $2,350.00</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-secondary">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-secondary-foreground">Adjudicaciones</CardTitle>
-            <Award className="h-4 w-4 text-secondary-foreground" />
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-secondary-foreground">Círculos</CardTitle>
+            <PiggyBank className="h-4 w-4 text-secondary-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-secondary-foreground">1</div>
-            <p className="text-xs text-secondary-foreground/70 mt-1">Círculo Q1 Finalizado</p>
+            <div className="text-2xl font-bold text-secondary-foreground">1 Activo</div>
+            <p className="text-xs text-secondary-foreground/70 mt-1">Adjudicación por Sorteo/Licit.</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-7">
-        {/* Active Progress */}
         <Card className="md:col-span-4 border-none shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg">Mis Círculos de Ahorro</CardTitle>
-            <CardDescription>Seguimiento de tus metas y cuotas.</CardDescription>
+            <CardTitle className="text-lg">Seguimiento de Alícuotas</CardTitle>
+            <CardDescription>Tu progreso hacia el Capital Suscripto.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {activeCircles.map((circle) => (
-              <div key={circle.id} className="group p-4 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
+              <div key={circle.id} className="group p-5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{circle.name}</h4>
-                    <span className="text-xs text-muted-foreground">Meta: ${circle.target.toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground">Capital Suscripto: ${circle.targetCapital.toLocaleString()} USD</span>
                   </div>
-                  <Badge variant={circle.status === "Al día" ? "secondary" : "destructive"} className="px-2 py-0.5">
+                  <Badge variant="secondary" className="px-2 py-0.5 bg-green-100 text-green-700 border-none">
                     {circle.status}
                   </Badge>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
-                    <span className="font-medium">Progreso</span>
+                    <span className="font-medium">Capital Pagado vs Saldo</span>
                     <span className="text-primary font-bold">{circle.progress}%</span>
                   </div>
                   <Progress value={circle.progress} className="h-2" />
                 </div>
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
+                <div className="mt-5 flex items-center justify-between gap-4">
+                  <div className="grid grid-cols-2 gap-6">
                     <div className="flex flex-col">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Cuota</span>
-                      <span className="text-sm font-bold">${circle.fee}</span>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Cuota Total</span>
+                      <span className="text-sm font-bold text-primary">${circle.totalFee}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Fecha Pago</span>
-                      <span className="text-sm font-bold">{circle.nextPayment}</span>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Saldo de Capital</span>
+                      <span className="text-sm font-bold text-foreground">${circle.balance.toLocaleString()}</span>
                     </div>
                   </div>
                   <Button variant="outline" size="sm" className="bg-white border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">
-                    Ver Detalles
+                    Ver Plan de Cuotas
                   </Button>
                 </div>
               </div>
@@ -141,18 +134,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* History / Transactions */}
         <Card className="md:col-span-3 border-none shadow-sm">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">Historial Reciente</CardTitle>
-                <CardDescription>Tus últimos movimientos.</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" className="text-primary font-bold hover:bg-accent">
-                Ver todo
-              </Button>
-            </div>
+            <CardTitle className="text-lg">Historial en USD</CardTitle>
+            <CardDescription>Últimos pagos de cuotas integradas.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -177,6 +162,9 @@ export default function Dashboard() {
                 ))}
               </TableBody>
             </Table>
+            <Button variant="ghost" className="w-full mt-4 text-xs font-bold text-muted-foreground hover:text-primary">
+              Descargar Comprobantes Fiscales
+            </Button>
           </CardContent>
         </Card>
       </div>
