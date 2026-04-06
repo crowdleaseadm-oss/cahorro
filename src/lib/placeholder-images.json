@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "financial-growth",
+      "description": "Abstract financial growth charts and piggy bank representing savings.",
+      "imageUrl": "https://picsum.photos/seed/finance1/800/600",
+      "imageHint": "financial growth"
+    },
+    {
+      "id": "community-savings",
+      "description": "A group of people collaborating or hands holding a piggy bank.",
+      "imageUrl": "https://picsum.photos/seed/finance2/800/600",
+      "imageHint": "community savings"
+    },
+    {
+      "id": "trust-investment",
+      "description": "Clean modern office setting representing professional financial services.",
+      "imageUrl": "https://picsum.photos/seed/finance3/800/600",
+      "imageHint": "trust investment"
+    }
+  ]
 }
