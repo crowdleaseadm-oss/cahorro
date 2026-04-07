@@ -19,23 +19,23 @@ export default function CircleAdminDetail() {
   const params = useParams();
   const db = useFirestore();
   const auth = useAuth();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const [isDrawing, setIsDrawing] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    if (!user && auth) {
+    if (!user && !isUserLoading && auth) {
       initiateAnonymousSignIn(auth);
     }
-  }, [user, auth]);
+  }, [user, isUserLoading, auth]);
 
   // 1. Fetch Circle Data
   const circleRef = useMemoFirebase(() => (db && params.id ? doc(db, 'saving_circles', params.id as string) : null), [db, params.id]);
   const { data: circle } = useDoc(circleRef);
 
   // 2. Fetch Bids
-  const bidsRef = useMemoFirebase(() => (db && params.id ? query(collection(db, 'saving_circles', params.id as string, 'bids'), orderBy('installmentsOffered', 'desc')) : null), [db, params.id]);
+  const bidsRef = useMemoFirebase(() => (db && params.id && user ? query(collection(db, 'saving_circles', params.id as string, 'bids'), orderBy('installmentsOffered', 'desc')) : null), [db, params.id, user]);
   const { data: bids, isLoading: bidsLoading } = useCollection(bidsRef);
 
   // 3. Fetch Members (using Collection Group to find all memberships for this circle)
@@ -97,6 +97,13 @@ export default function CircleAdminDetail() {
       });
     }, 2000);
   };
+
+  if (isUserLoading || !user) return (
+    <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+      <Loader2 className="h-10 w-10 text-primary animate-spin" />
+      <p className="text-muted-foreground">Autenticando sesión administrativa...</p>
+    </div>
+  );
 
   if (!circle) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
