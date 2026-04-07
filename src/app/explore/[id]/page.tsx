@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, Info, Loader2, DollarSign, Calendar, Lock, Unlock, Clock } from "lucide-react"
+import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, Info, Loader2, DollarSign, Calendar, Lock, Unlock, Clock, CheckCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -12,8 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc, collection, serverTimestamp, increment } from 'firebase/firestore';
+import { useDoc, useFirestore, useUser, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection, serverTimestamp, increment, query, where } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { toast } from '@/hooks/use-toast';
 
@@ -34,6 +34,18 @@ export default function CirclePlanPage() {
   const circleRef = useMemoFirebase(() => (db && params.id ? doc(db, 'saving_circles', params.id as string) : null), [db, params.id]);
   const { data: circle, isLoading: circleLoading } = useDoc(circleRef);
 
+  // Verificar si el usuario ya es miembro
+  const membershipQuery = useMemoFirebase(() => {
+    if (!db || !user || !params.id) return null;
+    return query(
+      collection(db, 'users', user.uid, 'saving_circle_memberships'),
+      where('savingCircleId', '==', params.id as string)
+    );
+  }, [db, user, params.id]);
+
+  const { data: existingMemberships, isLoading: membershipCheckLoading } = useCollection(membershipQuery);
+  const isAlreadyMember = existingMemberships && existingMemberships.length > 0;
+
   useEffect(() => {
     if (circle && circle.isPrivate) {
       setIsLocked(true);
@@ -49,7 +61,7 @@ export default function CirclePlanPage() {
     }
   };
 
-  if (circleLoading) return (
+  if (circleLoading || (user && membershipCheckLoading)) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
       <Loader2 className="h-10 w-10 text-primary animate-spin" />
       <p className="text-muted-foreground">Cargando detalles del plan...</p>
@@ -135,6 +147,10 @@ export default function CirclePlanPage() {
       return;
     }
     if (!db) return;
+    if (isAlreadyMember) {
+      toast({ title: "Ya eres miembro", description: "Ya tienes una suscripción activa para este círculo." });
+      return;
+    }
     const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
     if (isFull) {
       toast({ title: "Círculo Completo", description: "Este grupo ya ha alcanzado su capacidad máxima.", variant: "destructive" });
@@ -183,6 +199,7 @@ export default function CirclePlanPage() {
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild className="rounded-full">
           <Link href="/explore">
+            <path d="M19 12H5" /><path d="M12 19l-7-7 7-7" />
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
@@ -315,7 +332,7 @@ export default function CirclePlanPage() {
                                     <span className="text-sm font-medium">Seguro de Vida</span>
                                     <span className="text-[10px] text-muted-foreground">{(lifeInsRate * 100).toFixed(2)}% sobre saldo puro { formatCurrency(inst.saldoCapitalPuro) }</span>
                                   </div>
-                                  <span className="font-bold">{formatCurrency(inst.currentInsurance)}</span>
+                                  <span className="font-bold">{formatCurrency(adminFeeMensual)}</span>
                                 </div>
                                 {inst.currentSubFee > 0 && (
                                   <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/20">
@@ -344,43 +361,50 @@ export default function CirclePlanPage() {
         </div>
 
         <div className="space-y-6">
-          <Card className="border-none shadow-xl bg-primary text-white sticky top-8">
+          <Card className={`border-none shadow-xl ${isAlreadyMember ? 'bg-muted text-muted-foreground' : 'bg-primary text-white'} sticky top-8 transition-colors`}>
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-bold flex items-center gap-2">
-                <ShieldCheck className="h-6 w-6" />
-                Suscripción en USD
+                {isAlreadyMember ? <CheckCircle className="h-6 w-6" /> : <ShieldCheck className="h-6 w-6" />}
+                {isAlreadyMember ? 'Ya eres miembro' : 'Suscripción en USD'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <div className="flex justify-between items-center text-sm p-3 rounded-xl bg-white/10">
+                <div className={`flex justify-between items-center text-sm p-3 rounded-xl ${isAlreadyMember ? 'bg-white/50' : 'bg-white/10'}`}>
                   <span className="font-medium">Abono Inicial (1ra Cuota)</span>
                   <span className="font-bold text-lg">{formatCurrency(installments[0].currentTotal)}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm p-3 rounded-xl bg-white/10">
+                <div className={`flex justify-between items-center text-sm p-3 rounded-xl ${isAlreadyMember ? 'bg-white/50' : 'bg-white/10'}`}>
                   <span className="font-medium">Capital a Adjudicar</span>
                   <span className="font-bold text-lg">{formatCurrency(capitalTotal)}</span>
                 </div>
               </div>
 
-              <div className="bg-white/10 p-4 rounded-xl text-[10px] leading-relaxed text-white/80">
+              <div className={`p-4 rounded-xl text-[10px] leading-relaxed ${isAlreadyMember ? 'bg-white/50 text-muted-foreground' : 'bg-white/10 text-white/80'}`}>
                 <p><strong>Nota:</strong> Al suscribirse se abona la primera cuota. Las cuotas subsiguientes vencen los días 10 de cada mes, siempre que hayan transcurrido al menos 30 días desde la suscripción.</p>
               </div>
 
               <Button 
-                variant="secondary" 
+                variant={isAlreadyMember ? "outline" : "secondary"}
                 className="w-full h-14 text-lg font-bold shadow-lg"
                 onClick={handleSubscribe}
-                disabled={isSubscribing || (circle.currentMemberCount || 0) >= circle.memberCapacity}
+                disabled={isSubscribing || (circle.currentMemberCount || 0) >= circle.memberCapacity || isAlreadyMember}
               >
                 {isSubscribing ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
+                ) : isAlreadyMember ? (
+                  'Ya eres miembro'
                 ) : (circle.currentMemberCount || 0) >= circle.memberCapacity ? (
                   'Círculo Completo'
                 ) : (
                   'Abonar 1ra Cuota y Unirme'
                 )}
               </Button>
+              {isAlreadyMember && (
+                <p className="text-xs text-center font-medium animate-in fade-in slide-in-from-top-2">
+                  Puedes ver el estado de tu plan en "Mis Círculos"
+                </p>
+              )}
             </CardContent>
           </Card>
         </div>
