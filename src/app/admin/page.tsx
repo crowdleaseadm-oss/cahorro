@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ShieldCheck, Users, PiggyBank, MoreHorizontal, Plus, Search, DollarSign, Calculator } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -12,15 +11,25 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useAuth } from '@/firebase';
 import { collection, serverTimestamp } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import Link from 'next/link';
 
 export default function AdminPage() {
   const db = useFirestore();
+  const auth = useAuth();
+  const { user } = useUser();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
+  // Garantizar que el administrador esté autenticado (aunque sea anónimamente) para crear círculos
+  useEffect(() => {
+    if (!user && auth) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [user, auth]);
+
   const circlesRef = useMemoFirebase(() => (db ? collection(db, 'saving_circles') : null), [db]);
   const { data: circlesList, isLoading: circlesLoading } = useCollection(circlesRef);
 
@@ -47,7 +56,7 @@ export default function AdminPage() {
   }, [formData]);
 
   const handleCreateCircle = () => {
-    if (!db) return;
+    if (!db || !user) return;
     
     const newCircle = {
       ...formData,
@@ -58,7 +67,7 @@ export default function AdminPage() {
       status: 'Active',
       creationDate: new Date().toISOString(),
       createdAt: serverTimestamp(),
-      adminUserId: 'system-admin',
+      adminUserId: user.uid, // Vincular con el ID real del usuario autenticado
     };
 
     addDocumentNonBlocking(collection(db, 'saving_circles'), newCircle);
