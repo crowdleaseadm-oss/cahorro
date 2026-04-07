@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
-import { ShieldCheck, Users, PiggyBank, MoreHorizontal, Plus, Search, DollarSign, Calculator, Info } from "lucide-react"
+import { ShieldCheck, Users, PiggyBank, MoreHorizontal, Plus, Search, DollarSign, Calculator } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -11,31 +10,34 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { useFirestore } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import Link from 'next/link';
 
 export default function AdminPage() {
   const db = useFirestore();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
+  const circlesRef = useMemoFirebase(() => (db ? collection(db, 'saving_circles') : null), [db]);
+  const { data: circlesList, isLoading: circlesLoading } = useCollection(circlesRef);
+
   // Form State
   const [formData, setFormData] = useState({
     name: '',
     targetCapital: 50000,
     totalInstallments: 24,
-    subscriptionFeeRate: 0.03, // 3%
-    administrativeFeeRate: 0.02, // 2%
+    subscriptionFeeRate: 0.03,
+    administrativeFeeRate: 0.02,
     drawMethodCount: 1,
     bidMethodCount: 1,
   });
 
-  // Financial Calculations
   const calculations = useMemo(() => {
     const alicuota = formData.targetCapital / formData.totalInstallments;
     const subFee = alicuota * formData.subscriptionFeeRate;
     const adminFee = alicuota * formData.administrativeFeeRate;
-    const lifeInsurance = formData.targetCapital * 0.0009; // 0.09% mensual sobre saldo o capital? Usualmente sobre capital suscripto en estos modelos.
+    const lifeInsurance = formData.targetCapital * 0.0009;
     const totalMonthly = alicuota + subFee + adminFee + lifeInsurance;
     const capacity = formData.totalInstallments * (formData.drawMethodCount + formData.bidMethodCount);
     
@@ -50,36 +52,15 @@ export default function AdminPage() {
       installmentValue: calculations.alicuota,
       lifeInsuranceRate: 0.0009,
       memberCapacity: calculations.capacity,
-      status: 'Pending',
+      status: 'Active',
       creationDate: new Date().toISOString(),
       createdAt: serverTimestamp(),
-      adminUserId: 'system-admin', // Placeholder for current admin ID
+      adminUserId: 'system-admin', // Should be real ID from useUser()
     };
 
     addDocumentNonBlocking(collection(db, 'saving_circles'), newCircle);
     setIsDialogOpen(false);
   };
-
-  const circles = [
-    { 
-      id: "C001", 
-      name: "Empresarios Q4", 
-      members: "24/48", 
-      status: "Activo", 
-      capital: 50000, 
-      installments: 24,
-      alicuota: 2083.33 
-    },
-    { 
-      id: "C002", 
-      name: "Inmuebles Sur", 
-      members: "8/120", 
-      status: "Abierto", 
-      capital: 150000, 
-      installments: 60,
-      alicuota: 2500 
-    },
-  ];
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -132,7 +113,7 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 border-t pt-4">
                   <div className="space-y-2">
                     <Label htmlFor="installments">Cuotas (Múltiplo de 12)</Label>
                     <Input 
@@ -151,9 +132,9 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Sorteos por Ronda (1-5)</Label>
+                    <Label>Sorteos por Ronda</Label>
                     <Input 
                       type="number" 
                       min="1" 
@@ -163,7 +144,7 @@ export default function AdminPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Licitaciones por Ronda (1-5)</Label>
+                    <Label>Licitaciones por Ronda</Label>
                     <Input 
                       type="number" 
                       min="1" 
@@ -177,7 +158,7 @@ export default function AdminPage() {
                 <div className="bg-accent/30 p-4 rounded-xl space-y-3">
                   <div className="flex items-center gap-2 font-bold text-sm text-primary mb-1">
                     <Calculator className="h-4 w-4" />
-                    Previsualización Financiera (Estimado Mensual)
+                    Previsualización Financiera
                   </div>
                   <div className="grid grid-cols-3 gap-4 text-xs">
                     <div>
@@ -198,7 +179,7 @@ export default function AdminPage() {
 
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                <Button onClick={handleCreateCircle}>Crear Círculo en USD</Button>
+                <Button onClick={handleCreateCircle}>Crear Círculo</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -208,32 +189,12 @@ export default function AdminPage() {
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="border-none shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Capital Suscripto Total</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Círculos Registrados</CardTitle>
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$4,250,000</div>
-            <div className="text-xs text-muted-foreground mt-1">Consolidado en USD</div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Grupos Activos</CardTitle>
-            <PiggyBank className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">42</div>
-            <div className="text-xs text-muted-foreground mt-1">Múltiplos de 12 cuotas</div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Adjudicaciones Mes</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">12</div>
-            <div className="text-xs text-muted-foreground mt-1">Sorteo y Licitación</div>
+            <div className="text-2xl font-bold">{circlesList?.length || 0}</div>
+            <div className="text-xs text-muted-foreground mt-1">Configurados en USD</div>
           </CardContent>
         </Card>
       </div>
@@ -243,11 +204,11 @@ export default function AdminPage() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-lg">Configuración de Círculos</CardTitle>
-              <CardDescription>Parámetros financieros: Alícuotas, Gastos y Seguros.</CardDescription>
+              <CardDescription>Gestione la capacidad y parámetros financieros.</CardDescription>
             </div>
             <div className="relative w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Buscar por capital o nombre..." className="pl-9 h-9 text-xs" />
+              <Input placeholder="Buscar círculo..." className="pl-9 h-9 text-xs" />
             </div>
           </div>
         </CardHeader>
@@ -265,20 +226,22 @@ export default function AdminPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {circles.map((circle) => (
+              {circlesLoading ? (
+                <TableRow><TableCell colSpan={7} className="text-center py-4">Cargando círculos...</TableCell></TableRow>
+              ) : circlesList?.map((circle) => (
                 <TableRow key={circle.id}>
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-bold">{circle.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{circle.id}</span>
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{circle.id}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">${circle.capital.toLocaleString()} USD</TableCell>
-                  <TableCell>{circle.installments}</TableCell>
-                  <TableCell className="text-primary font-bold">${circle.alicuota.toLocaleString()}</TableCell>
-                  <TableCell>{circle.members}</TableCell>
+                  <TableCell className="font-medium">${circle.targetCapital.toLocaleString()} USD</TableCell>
+                  <TableCell>{circle.totalInstallments}</TableCell>
+                  <TableCell className="text-primary font-bold">${(circle.targetCapital / circle.totalInstallments).toFixed(2)}</TableCell>
+                  <TableCell>{circle.memberCapacity}</TableCell>
                   <TableCell>
-                    <Badge variant={circle.status === "Abierto" ? "default" : "secondary"}>
+                    <Badge variant={circle.status === "Active" ? "default" : "secondary"}>
                       {circle.status}
                     </Badge>
                   </TableCell>
@@ -290,8 +253,10 @@ export default function AdminPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Editar Tasas (Admin/Susc.)</DropdownMenuItem>
-                        <DropdownMenuItem>Ver Plan de Adjudicación</DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link href={`/admin/circles/${circle.id}`}>Gestionar Miembros</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>Editar Tasas</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive font-bold">Suspender</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

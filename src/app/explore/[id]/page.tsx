@@ -1,37 +1,63 @@
-
 'use client';
 
-import { ArrowLeft, Calculator, Info, ShieldCheck, Target, TrendingUp, Calendar, Users, DollarSign, CheckCircle2 } from "lucide-react"
+import { useState } from 'react';
+import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
+import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { doc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function CirclePlanPage() {
   const params = useParams();
-  
-  // Simulated data for the circle (In a real app, this would be fetched from Firestore)
-  const circle = {
-    id: params.id,
-    name: "Círculo Premium 50K",
-    capital: 50000,
-    term: 24,
-    subscriptionFeeRate: 0.03, // 3%
-    adminFeeRate: 0.02, // 2%
-    insuranceRate: 0.0009, // 0.09%
-    drawsPerMonth: 1,
-    bidsPerMonth: 1,
-  };
+  const router = useRouter();
+  const { user } = useUser();
+  const db = useFirestore();
+  const [isSubscribing, setIsSubscribing] = useState(false);
 
-  // Calculations
-  const alicuota = circle.capital / circle.term;
+  const circleRef = useMemoFirebase(() => (db && params.id ? doc(db, 'saving_circles', params.id as string) : null), [db, params.id]);
+  const { data: circle, isLoading: circleLoading } = useDoc(circleRef);
+
+  if (circleLoading) return <div className="p-10 text-center">Cargando plan...</div>;
+  if (!circle) return <div className="p-10 text-center text-destructive">Círculo no encontrado</div>;
+
+  const alicuota = circle.targetCapital / circle.totalInstallments;
   const subFee = alicuota * circle.subscriptionFeeRate;
-  const adminFee = alicuota * circle.adminFeeRate;
-  const insurance = circle.capital * circle.insuranceRate;
+  const adminFee = alicuota * circle.administrativeFeeRate;
+  const insurance = circle.targetCapital * 0.0009;
   const totalMonthly = alicuota + subFee + adminFee + insurance;
-  const totalMembers = circle.term * (circle.drawsPerMonth + circle.bidsPerMonth);
+  const totalMembers = circle.memberCapacity;
+
+  const handleSubscribe = () => {
+    if (!user || !db) return;
+    setIsSubscribing(true);
+
+    const membershipData = {
+      userId: user.uid,
+      savingCircleId: circle.id,
+      savingCircleName: circle.name,
+      savingCircleAdminUserId: circle.adminUserId,
+      joiningDate: new Date().toISOString(),
+      status: 'Active',
+      paidInstallmentsCount: 0,
+      capitalPaid: 0,
+      outstandingCapitalBalance: circle.targetCapital,
+      adjudicationStatus: 'Pending',
+      createdAt: serverTimestamp(),
+    };
+
+    const membershipsCol = collection(db, 'users', user.uid, 'saving_circle_memberships');
+    addDocumentNonBlocking(membershipsCol, membershipData);
+    
+    // Simulate navigation after start
+    setTimeout(() => {
+      router.push('/my-circles');
+    }, 1000);
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -51,7 +77,7 @@ export default function CirclePlanPage() {
             <div className="flex justify-between items-start">
               <div>
                 <CardTitle className="text-2xl font-bold text-primary">{circle.name}</CardTitle>
-                <CardDescription>Capital Suscripto: ${circle.capital.toLocaleString()} USD</CardDescription>
+                <CardDescription>Capital Suscripto: ${circle.targetCapital.toLocaleString()} USD</CardDescription>
               </div>
               <Badge variant="outline" className="border-primary/20 text-primary font-bold">Sin Interés Bancario</Badge>
             </div>
@@ -68,7 +94,7 @@ export default function CirclePlanPage() {
               </div>
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Plazo</span>
-                <span className="text-lg font-bold text-foreground">{circle.term} Meses</span>
+                <span className="text-lg font-bold text-foreground">{circle.totalInstallments} Meses</span>
               </div>
             </div>
 
@@ -83,15 +109,11 @@ export default function CirclePlanPage() {
                   <span className="font-medium">${alicuota.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Derecho de Suscripción ({(circle.subscriptionFeeRate * 100).toFixed(0)}%)</span>
-                  <span className="font-medium">${subFee.toFixed(2)}</span>
+                  <span className="text-muted-foreground">Der. Suscripción ({(circle.subscriptionFeeRate * 100).toFixed(0)}%) + Adm ({(circle.administrativeFeeRate * 100).toFixed(0)}%)</span>
+                  <span className="font-medium">${(subFee + adminFee).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Gastos Administrativos ({(circle.adminFeeRate * 100).toFixed(0)}%)</span>
-                  <span className="font-medium">${adminFee.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Seguro de Vida ({(circle.insuranceRate * 100).toFixed(2)}%)</span>
+                  <span className="text-muted-foreground">Seguro de Vida (0.09%)</span>
                   <span className="font-medium">${insurance.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold text-primary pt-3 border-t">
@@ -117,16 +139,23 @@ export default function CirclePlanPage() {
                   <TrendingUp className="h-4 w-4" />
                   <span className="text-sm font-medium">Sorteo Mensual</span>
                 </div>
-                <span className="font-bold">{circle.drawsPerMonth} cupo</span>
+                <span className="font-bold">{circle.drawMethodCount} cupo</span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-xl bg-white/10">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4" />
                   <span className="text-sm font-medium">Licitación Mensual</span>
                 </div>
-                <span className="font-bold">{circle.bidsPerMonth} cupo</span>
+                <span className="font-bold">{circle.bidMethodCount} cupo</span>
               </div>
-              <Button variant="secondary" className="w-full font-bold">Suscribirme Ahora</Button>
+              <Button 
+                variant="secondary" 
+                className="w-full font-bold"
+                onClick={handleSubscribe}
+                disabled={isSubscribing}
+              >
+                {isSubscribing ? 'Suscribiendo...' : 'Suscribirme Ahora'}
+              </Button>
             </CardContent>
           </Card>
 
@@ -174,7 +203,7 @@ export default function CirclePlanPage() {
                   <TableCell>${alicuota.toFixed(2)}</TableCell>
                   <TableCell>${(subFee + adminFee + insurance).toFixed(2)}</TableCell>
                   <TableCell className="text-primary font-bold">${totalMonthly.toFixed(2)}</TableCell>
-                  <TableCell className="font-medium">${(circle.capital - (num * alicuota)).toFixed(2)} USD</TableCell>
+                  <TableCell className="font-medium">${(circle.targetCapital - (num * alicuota)).toFixed(2)} USD</TableCell>
                 </TableRow>
               ))}
             </TableBody>

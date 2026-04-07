@@ -2,76 +2,30 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * CÍRCULO DE AHORRO SECURITY RULES
-     *
-     * Core Philosophy:
-     * This ruleset enforces a hybrid security model designed for a financial collective saving platform.
-     * It combines strict User-Ownership for private financial data with Role-Based Access Control (RBAC) 
-     * for system administration and Circle-specific administration.
-     *
-     * Data Structure:
-     * - /users/{userId}: Private user profiles.
-     * - /roles_admin/{userId}: Presence of a document here grants global administrative privileges.
-     * - /saving_circles/{circleId}: Publicly viewable saving circle parameters.
-     * - /users/{userId}/saving_circle_memberships/...: User-specific participation in circles.
-     * - /static_content_pages/{pageId}: Public informational content.
-     *
-     * Key Security Decisions:
-     * 1. Authorization Independence via Denormalization: To avoid expensive 'get()' calls, 
-     *    critical authorization fields like 'adminUserId' are denormalized onto child documents 
-     *    (Memberships, Payments, Events). This allows circle administrators to manage their 
-     *    specific circles without global admin rights.
-     * 2. Structural Segregation: User-specific data is nested under the user's root path, 
-     *    simplifying ownership checks and ensuring query-aware security.
-     * 3. Prototyping Flexibility: Rules enforce WHO can access data and relational integrity 
-     *    (ensuring user IDs match paths), but do not strictly validate the shape or types of 
-     *    content fields to allow for rapid UI/UX iteration.
-     * 4. Robustness: All update and delete operations require an explicit existence check 
-     *    to prevent operations on non-existent data.
-     */
-
-    // --- Helper Functions ---
-
-    /** @description Checks if the request is from an authenticated user. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** @description Checks if the authenticated user's UID matches the provided userId. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** @description Checks if the user has a global administrator role. */
     function isGlobalAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    /** @description Checks if the user is the administrator of a specific saving circle based on a denormalized ID. */
     function isCircleAdmin(adminId) {
       return isSignedIn() && request.auth.uid == adminId;
     }
 
-    /** @description Combines ownership check with existence check for safe updates/deletes. */
     function isExistingOwner(userId) {
       return resource != null && isOwner(userId);
     }
 
-    /** @description Validates that the data being written identifies the correct user based on the path. */
     function isValidUserRef(userId) {
       return request.resource.data.userId == userId;
     }
 
-    // --- Collection Rules ---
-
-    /**
-     * @description Rules for the User profile documents.
-     * @path /users/{userId}
-     * @allow (get) Authenticated owner or any Global Admin.
-     * @deny (create) If the userId in the path does not match the auth UID.
-     * @principle Ownership-based access for private profiles.
-     */
     match /users/{userId} {
       allow get: if isOwner(userId) || isGlobalAdmin();
       allow list: if isOwner(userId) || isGlobalAdmin();
@@ -79,83 +33,41 @@ service cloud.firestore {
       allow update: if (isExistingOwner(userId) || isGlobalAdmin()) && (request.resource.data.id == resource.data.id);
       allow delete: if isExistingOwner(userId) || isGlobalAdmin();
 
-      /**
-       * @description User's memberships in various saving circles.
-       * @path /users/{userId}/saving_circle_memberships/{membershipId}
-       * @allow (create) The owner of the path.
-       * @deny (update) If not the user, the specific circle admin, or a global admin.
-       * @principle Denormalized 'savingCircleAdminUserId' allows circle admins to manage members.
-       */
       match /saving_circle_memberships/{membershipId} {
         allow get, list: if isOwner(userId) || isCircleAdmin(resource.data.savingCircleAdminUserId) || isGlobalAdmin();
         allow create: if isOwner(userId) && isValidUserRef(userId);
         allow update: if (isExistingOwner(userId) || isCircleAdmin(resource.data.savingCircleAdminUserId) || isGlobalAdmin()) && (request.resource.data.userId == resource.data.userId);
         allow delete: if isExistingOwner(userId) || isCircleAdmin(resource.data.savingCircleAdminUserId) || isGlobalAdmin();
 
-        /**
-         * @description Payment records for a specific membership.
-         * @path /users/{userId}/saving_circle_memberships/{membershipId}/payments/{paymentId}
-         * @allow (list) The user viewing their own payment history.
-         * @deny (create) If not performed by the authenticated owner.
-         * @principle Nested ownership with admin oversight via denormalized fields.
-         */
         match /payments/{paymentId} {
           allow get, list: if isOwner(userId) || isCircleAdmin(resource.data.savingCircleAdminUserId) || isGlobalAdmin();
-          allow create: if isOwner(userId);
+          allow create: if isOwner(userId) || isCircleAdmin(request.resource.data.savingCircleAdminUserId) || isGlobalAdmin();
           allow update: if (isExistingOwner(userId) || isCircleAdmin(resource.data.savingCircleAdminUserId) || isGlobalAdmin());
-          allow delete: if isGlobalAdmin(); // Payments are usually immutable; only global admins can delete.
+          allow delete: if isGlobalAdmin();
         }
       }
     }
 
-    /**
-     * @description Administrative role assignments.
-     * @path /roles_admin/{userId}
-     * @allow (get) Any signed-in user to verify admin status.
-     * @deny (write) Any non-global admin attempting to escalate privileges.
-     * @principle Secure RBAC using existence-based checks.
-     */
     match /roles_admin/{userId} {
       allow get: if isSignedIn();
       allow list: if isGlobalAdmin();
       allow create, update, delete: if isGlobalAdmin();
     }
 
-    /**
-     * @description Saving Circle configuration and parameters.
-     * @path /saving_circles/{savingCircleId}
-     * @allow (list) Any authenticated user browsing available circles.
-     * @deny (update) If the user is not the designated admin of the circle or a global admin.
-     * @principle Public discovery with restricted administrative control.
-     */
     match /saving_circles/{savingCircleId} {
       allow get, list: if isSignedIn();
       allow create: if isGlobalAdmin();
       allow update: if (isCircleAdmin(resource.data.adminUserId) || isGlobalAdmin()) && (request.resource.data.adminUserId == resource.data.adminUserId);
       allow delete: if isGlobalAdmin();
 
-      /**
-       * @description Logs of adjudication (draw/bid) events within a circle.
-       * @path /saving_circles/{savingCircleId}/adjudication_events/{eventId}
-       * @allow (get) All authenticated users for transparency.
-       * @deny (create) Non-administrators.
-       * @principle Denormalized admin ID ensures only authorized admins log results.
-       */
       match /adjudication_events/{eventId} {
         allow get, list: if isSignedIn();
         allow create: if isCircleAdmin(request.resource.data.savingCircleAdminUserId) || isGlobalAdmin();
-        allow update: if (isCircleAdmin(resource.data.savingCircleAdminUserId) || isGlobalAdmin());
+        allow update: if (isCircleAdmin(request.resource.data.savingCircleAdminUserId) || isGlobalAdmin());
         allow delete: if isGlobalAdmin();
       }
     }
 
-    /**
-     * @description Static content like FAQs and 'How it Works'.
-     * @path /static_content_pages/{pageId}
-     * @allow (get) Public access for all users (including unauthenticated).
-     * @deny (write) Anyone who is not a global administrator.
-     * @principle Public informational read access with strict admin-only writes.
-     */
     match /static_content_pages/{pageId} {
       allow get, list: if true;
       allow create, update, delete: if isGlobalAdmin();
