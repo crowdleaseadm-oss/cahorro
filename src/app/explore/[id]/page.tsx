@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -125,6 +126,9 @@ export default function CirclePlanPage() {
     };
   });
 
+  const totalPlanSum = installments.reduce((acc, inst) => acc + inst.currentTotal, 0);
+  const cuotaPromedio = totalPlanSum / totalCuotas;
+
   const handleSubscribe = () => {
     if (!user) {
       toast({ title: "Inicia sesión", description: "Debes estar registrado para unirte a un círculo.", variant: "destructive" });
@@ -223,10 +227,10 @@ export default function CirclePlanPage() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Cuota Inicial</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Cuota Promedio</span>
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-primary" />
-                    <span className="text-xl font-bold">{formatCurrency(installments[0].currentTotal)}</span>
+                    <span className="text-xl font-bold">{formatCurrency(cuotaPromedio)}</span>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -251,7 +255,7 @@ export default function CirclePlanPage() {
                   </div>
                   <div className="text-center md:text-right">
                     <div className="text-4xl font-black text-primary">
-                      {(((installments.reduce((acc, inst) => acc + inst.currentTotal, 0) - capitalTotal) / capitalTotal) * 100).toFixed(2)}%
+                      {(((totalPlanSum - capitalTotal) / capitalTotal) * 100).toFixed(2)}%
                     </div>
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Carga Total del Plan</span>
                   </div>

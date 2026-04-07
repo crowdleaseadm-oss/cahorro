@@ -65,13 +65,17 @@ export default function ExplorePage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
           {filteredCircles.map((circle) => {
-            const alicuota = circle.targetCapital / circle.totalInstallments;
+            const n = circle.totalInstallments;
+            const alicuota = circle.targetCapital / n;
             const adminFee = alicuota * (circle.administrativeFeeRate || 0.10);
-            const insurance = circle.targetCapital * (circle.lifeInsuranceRate || 0.0009);
-            const totalSubFee = circle.targetCapital * (circle.subscriptionFeeRate || 0.03);
-            const subFeeMensual = totalSubFee / Math.ceil(circle.totalInstallments * 0.20);
+            const subFeeTotal = circle.targetCapital * (circle.subscriptionFeeRate || 0.03);
             
-            const totalFeeInicial = alicuota + adminFee + insurance + subFeeMensual;
+            // Suma del seguro de vida decreciente: rate * capital * (n + 1) / 2
+            const insuranceSum = (circle.lifeInsuranceRate || 0.0009) * circle.targetCapital * (n + 1) / 2;
+            
+            const totalPlanCost = circle.targetCapital + (n * adminFee) + subFeeTotal + insuranceSum;
+            const cuotaPromedio = totalPlanCost / n;
+            
             const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
 
             return (
@@ -112,19 +116,17 @@ export default function ExplorePage() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Cuota Inicial</span>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Cuota Promedio</span>
                       <div className="font-bold text-primary flex items-center gap-1">
-                        ${totalFeeInicial.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${cuotaPromedio.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs space-y-1">
-                              <p className="text-xs font-bold">Conceptos de cuota inicial:</p>
-                              <p className="text-[10px]">Alícuota: ${alicuota.toFixed(2)}</p>
-                              <p className="text-[10px]">Gastos Admin: ${adminFee.toFixed(2)}</p>
-                              <p className="text-[10px]">Suscripción + Seguro: ${(subFeeMensual + insurance).toFixed(2)}</p>
+                              <p className="text-xs font-bold">Cuota Promedio Estimada:</p>
+                              <p className="text-[10px] leading-relaxed">Resultado de dividir el costo total del plan (Capital + Gastos + Seguros) por {n} meses.</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
