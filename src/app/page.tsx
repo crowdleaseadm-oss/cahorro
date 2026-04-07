@@ -2,24 +2,28 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PiggyBank, TrendingUp, Users, Calendar, Award, DollarSign, ArrowUpRight, Bell, PartyPopper, Loader2 } from "lucide-react"
+import { PiggyBank, Users, Calendar, Award, PartyPopper, Loader2, ArrowRight } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import Link from "next/link"
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { collection } from 'firebase/firestore';
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const [mounted, setMounted] = useState(false);
+  const [nextDueDate, setNextDueDate] = useState<string>('');
 
   useEffect(() => {
     setMounted(true);
+    // Calcular próximo vencimiento (ej: día 10 del próximo mes)
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 10);
+    setNextDueDate(nextMonth.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }));
   }, []);
 
   // 1. Fetch User Memberships
@@ -28,14 +32,6 @@ export default function Dashboard() {
     [db, user]
   );
   const { data: memberships, isLoading: membershipsLoading } = useCollection(membershipsRef);
-
-  // 2. Calculations based on real data
-  const stats = (memberships || []).reduce((acc, m) => {
-    acc.capitalPaid += m.capitalPaid || 0;
-    acc.totalCapitalSuscripto += (m.capitalPaid + m.outstandingCapitalBalance) || 0;
-    acc.totalOutstanding += m.outstandingCapitalBalance || 0;
-    return acc;
-  }, { capitalPaid: 0, totalCapitalSuscripto: 0, totalOutstanding: 0 });
 
   const adjudicatedMemberships = (memberships || []).filter(m => m.adjudicationStatus === 'Adjudicated');
 
@@ -60,7 +56,7 @@ export default function Dashboard() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Hola, {user?.displayName?.split(' ')[0] || 'Inversor'} 👋
           </h1>
-          <p className="text-muted-foreground mt-1">Tu resumen financiero consolidado en USD.</p>
+          <p className="text-muted-foreground mt-1">Tu resumen de ahorro y adjudicaciones.</p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="bg-white px-3 py-1 font-medium border-primary/20 text-primary">
@@ -81,8 +77,7 @@ export default function Dashboard() {
               <AlertTitle className="text-lg font-bold ml-2">¡Felicitaciones! Plan Adjudicado</AlertTitle>
               <AlertDescription className="ml-2 opacity-90">
                 Tu plan <strong>{m.savingCircleName}</strong> ha sido seleccionado para adjudicación. 
-                Ponte en contacto con administración para coordinar la entrega de tu capital de 
-                <strong> {formatCurrency(m.capitalPaid + m.outstandingCapitalBalance)} USD</strong>.
+                Ponte en contacto con administración para coordinar la entrega de tu capital.
               </AlertDescription>
               <Button size="sm" variant="secondary" className="mt-4 font-bold" asChild>
                 <Link href="/my-circles">Ver Detalles</Link>
@@ -92,25 +87,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-none shadow-sm bg-primary text-primary-foreground">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80">Capital Integrado</CardTitle>
-            <TrendingUp className="h-4 w-4 opacity-80" />
+            <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80">Próximo Vencimiento</CardTitle>
+            <Calendar className="h-4 w-4 opacity-80" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.capitalPaid)}</div>
-            <p className="text-xs opacity-70 mt-1">Alícuotas puras pagadas</p>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Saldo Pendiente</CardTitle>
-            <DollarSign className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(stats.totalOutstanding)}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total por suscribir</p>
+            <div className="text-2xl font-bold">{nextDueDate || 'Cargando...'}</div>
+            <p className="text-xs opacity-70 mt-1">Día de cobro administrativo</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-white">
@@ -120,7 +105,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{memberships?.length || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Planes vigentes</p>
+            <p className="text-xs text-muted-foreground mt-1">Planes vigentes en USD</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-secondary">
@@ -157,7 +142,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between mb-4">
                       <div>
                         <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{membership.savingCircleName}</h4>
-                        <span className="text-xs text-muted-foreground">Capital: {formatCurrency(totalCapital)} USD</span>
+                        <span className="text-xs text-muted-foreground">Capital Suscripto: {formatCurrency(totalCapital)} USD</span>
                       </div>
                       <Badge variant={membership.adjudicationStatus === 'Adjudicated' ? "default" : "secondary"} className={membership.adjudicationStatus === 'Adjudicated' ? "bg-green-100 text-green-700 border-none" : ""}>
                         {membership.adjudicationStatus === 'Adjudicated' ? 'Adjudicado' : 'Pendiente'}
@@ -165,7 +150,7 @@ export default function Dashboard() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs">
-                        <span className="font-medium">Capital Pagado</span>
+                        <span className="font-medium">Integración de Capital</span>
                         <span className="text-primary font-bold">{progress.toFixed(1)}%</span>
                       </div>
                       <Progress value={progress} className="h-2" />
@@ -173,7 +158,7 @@ export default function Dashboard() {
                     <div className="mt-5 flex items-center justify-between gap-4">
                       <div className="grid grid-cols-2 gap-6">
                         <div className="flex flex-col">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Saldo USD</span>
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Saldo Pendiente</span>
                           <span className="text-sm font-bold text-foreground">{formatCurrency(membership.outstandingCapitalBalance)}</span>
                         </div>
                         <div className="flex flex-col">
@@ -195,35 +180,30 @@ export default function Dashboard() {
         <Card className="md:col-span-3 border-none shadow-sm bg-white">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Actividad Reciente</CardTitle>
-              <Bell className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-lg">Próximos Pasos</CardTitle>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
             </div>
-            <CardDescription>Eventos de adjudicación y sorteos.</CardDescription>
+            <CardDescription>Acciones recomendadas para tu plan.</CardDescription>
           </CardHeader>
-          <CardContent>
-            {adjudicatedMemberships.length === 0 ? (
-              <div className="py-12 text-center">
-                <Award className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-                <p className="text-xs text-muted-foreground">No hay novedades de adjudicación en este momento.</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {adjudicatedMemberships.map((m) => (
-                  <div key={m.id} className="flex gap-4 p-3 rounded-xl border border-primary/10 bg-primary/5">
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-                      <Award className="h-4 w-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold leading-none">{m.savingCircleName}</p>
-                      <p className="text-xs text-primary font-medium mt-1">¡Plan Adjudicado!</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <Button variant="ghost" className="w-full mt-6 text-xs font-bold text-muted-foreground hover:text-primary">
-              Ver Historial Completo
-            </Button>
+          <CardContent className="space-y-4">
+            <div className="p-4 rounded-xl border border-primary/10 bg-primary/5 space-y-2">
+              <h5 className="text-sm font-bold">Licitación Abierta</h5>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                ¿Quieres adjudicar antes? Realiza una oferta de licitación en tus círculos activos.
+              </p>
+              <Button size="sm" variant="link" className="p-0 h-auto text-primary font-bold" asChild>
+                <Link href="/my-circles">Ir a Mis Círculos</Link>
+              </Button>
+            </div>
+            <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-2">
+              <h5 className="text-sm font-bold">Nuevas Oportunidades</h5>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Explora nuevos círculos en USD con alícuotas competitivas.
+              </p>
+              <Button size="sm" variant="link" className="p-0 h-auto text-muted-foreground font-bold" asChild>
+                <Link href="/explore">Ver Catálogo</Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
