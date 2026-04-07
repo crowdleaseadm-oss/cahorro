@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, Info, Loader2, DollarSign, Calendar, Lock, Unlock, Clock, CheckCircle } from "lucide-react"
+import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, Info, Loader2, DollarSign, Calendar, Lock, Unlock, Clock, CheckCircle, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -62,6 +62,20 @@ export default function CirclePlanPage() {
     } else {
       toast({ title: "Error", description: "Contraseña incorrecta.", variant: "destructive" });
     }
+  };
+
+  const handleDownloadReceipt = (num: number) => {
+    toast({
+      title: "Generando recibo...",
+      description: `El recibo de la cuota #${num} se descargará en breve.`,
+    });
+    // Simulación de descarga
+    setTimeout(() => {
+      toast({
+        title: "Descarga completada",
+        description: `Recibo_Cuota_${num}_${circle?.id}.pdf`,
+      });
+    }, 2000);
   };
 
   if (circleLoading || (user && membershipCheckLoading)) return (
@@ -371,9 +385,19 @@ export default function CirclePlanPage() {
                                     <span className="text-2xl font-black text-primary">{formatCurrency(inst.currentTotal)}</span>
                                   </div>
                                   {isPaid && (
-                                    <div className="pt-2 flex items-center justify-center gap-2 text-green-600 font-bold text-sm">
-                                      <CheckCircle className="h-4 w-4" />
-                                      Cuota Abonada Correctamente
+                                    <div className="pt-4 flex flex-col gap-4 border-t mt-4">
+                                      <div className="flex items-center justify-center gap-2 text-green-600 font-bold text-sm">
+                                        <CheckCircle className="h-4 w-4" />
+                                        Cuota Abonada Correctamente
+                                      </div>
+                                      <Button 
+                                        variant="outline" 
+                                        className="w-full gap-2 font-bold border-primary text-primary hover:bg-primary/5"
+                                        onClick={() => handleDownloadReceipt(inst.num)}
+                                      >
+                                        <Download className="h-4 w-4" />
+                                        Descargar Recibo
+                                      </Button>
                                     </div>
                                   )}
                                 </div>
