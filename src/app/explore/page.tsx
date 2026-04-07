@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Search, Filter, Users, Calendar, Target, ChevronRight, Info, Loader2 } from "lucide-react"
@@ -32,7 +31,7 @@ export default function ExplorePage() {
     <div className="space-y-8 max-w-7xl mx-auto">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Explorar Círculos en USD</h1>
-        <p className="text-muted-foreground">Capital Suscripto en múltiplos de $5,000 con cuotas sin interés bancario.</p>
+        <p className="text-muted-foreground">Capital Suscripto en múltiplos de $5,000 con gestión de ahorro colaborativo.</p>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center">
@@ -126,7 +125,6 @@ export default function ExplorePage() {
                       <Calendar className="h-4 w-4 text-primary" />
                       <span className="font-medium">Plazo: {circle.totalInstallments} meses</span>
                     </div>
-                    <span className="text-[10px] font-bold text-primary italic">Sin interés bancario</span>
                   </div>
                 </CardContent>
                 <CardFooter className="pt-2">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -46,38 +45,22 @@ export default function CirclePlanPage() {
     </div>
   );
 
-  // --- INGENIERÍA FINANCIERA ACTUALIZADA ---
   const capitalTotal = circle.targetCapital;
   const totalCuotas = circle.totalInstallments;
   
-  // 1. Alícuota Pura
   const alicuotaPura = capitalTotal / totalCuotas;
-  
-  // 2. Gasto Administrativo: 10% de la alícuota pura
   const adminFeeMensual = alicuotaPura * 0.10;
-  
-  // 3. Derecho de Suscripción: 3% del capital total, prorrateado en el primer 20% de cuotas
   const totalSubFee = capitalTotal * 0.03;
   const installmentsWithSubFee = Math.ceil(totalCuotas * 0.20);
   const proratedSubFee = totalSubFee / installmentsWithSubFee;
+  const insuranceRate = 0.0009;
 
-  const insuranceRate = 0.0009; // 0.09%
-
-  // Generar datos de las cuotas con cálculos exactos
   const installments = Array.from({ length: totalCuotas }, (_, i) => {
     const num = i + 1;
-    
-    // Saldo de capital puro para el cálculo del seguro: (Capital Suscripto - Total de Alícuotas Pagas)
-    // Para la cuota #1 (i=0), no se han pagado alícuotas aún.
     const totalAlicuotasPagas = alicuotaPura * i;
     const saldoCapitalPuro = capitalTotal - totalAlicuotasPagas;
-    
-    // Seguro de Vida: 0.09% sobre el saldo de capital puro
     const currentInsurance = saldoCapitalPuro * insuranceRate;
-    
-    // Derecho de suscripción: solo en el primer 20% de las cuotas
     const currentSubFee = num <= installmentsWithSubFee ? proratedSubFee : 0;
-    
     const currentTotal = alicuotaPura + adminFeeMensual + currentInsurance + currentSubFee;
     
     return { 
@@ -305,7 +288,7 @@ export default function CirclePlanPage() {
                 <ShieldCheck className="h-6 w-6" />
                 Suscripción en USD
               </CardTitle>
-              <CardDescription className="text-white/80">Capital garantizado sin intereses bancarios.</CardDescription>
+              <CardDescription className="text-white/80">Capital garantizado bajo suscripción colectiva.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">

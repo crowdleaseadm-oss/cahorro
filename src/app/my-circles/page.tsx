@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -45,7 +44,6 @@ export default function MyCirclesPage() {
       savingCircleId: selectedMembership.savingCircleId,
       membershipId: selectedMembership.id,
       installmentsOffered: Number(bidAmount),
-      // Alicuota is calculated on the server or provided by membership for MVP
       amountInUsd: Number(bidAmount) * (selectedMembership.capitalPaid / (selectedMembership.paidInstallmentsCount || 1) || 2000), 
       bidDate: new Date().toISOString(),
       status: 'Pending',
@@ -82,7 +80,7 @@ export default function MyCirclesPage() {
         <Card className="border-dashed border-2 bg-muted/20 flex flex-col items-center justify-center p-16 text-center rounded-3xl">
           <Activity className="h-16 w-16 text-muted-foreground mb-6 opacity-20" />
           <h3 className="text-xl font-bold">Sin suscripciones activas</h3>
-          <p className="text-muted-foreground mb-8 max-w-md">Únete a un círculo para comenzar tu plan de ahorro programado sin intereses bancarios.</p>
+          <p className="text-muted-foreground mb-8 max-w-md">Únete a un círculo para comenzar tu plan de ahorro programado.</p>
           <Button asChild size="lg" className="rounded-xl shadow-lg">
             <Link href="/explore">Explorar Círculos</Link>
           </Button>
