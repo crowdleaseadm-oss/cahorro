@@ -10,19 +10,24 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import Link from "next/link"
 
 export default function Dashboard() {
+  // Financial metrics based on 50K circle with 24 installments
   const activeCircles = [
     {
       id: "1",
       name: "Círculo Emprendedores 50K",
       targetCapital: 50000,
-      progress: 65,
-      nextPayment: "2024-05-15",
+      paidInstallments: 6,
+      totalInstallments: 24,
       alicuota: 2083.33,
       totalFee: 2350,
-      balance: 17500, // Saldo de capital: lo que falta pagar de alicuotas
       status: "Al día",
     }
   ]
+
+  // Calculated values
+  const capitalPaid = activeCircles[0].paidInstallments * activeCircles[0].alicuota;
+  const capitalBalance = activeCircles[0].targetCapital - capitalPaid;
+  const progressPercent = (activeCircles[0].paidInstallments / activeCircles[0].totalInstallments) * 100;
 
   const history = [
     { date: "15 Abr 2024", concept: "Cuota 6/24 - Alicuota + Gastos", amount: 2350, status: "Completado" },
@@ -34,14 +39,14 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Hola, Alejandro 👋</h1>
-          <p className="text-muted-foreground mt-1">Tu resumen financiero en USD.</p>
+          <p className="text-muted-foreground mt-1">Tu resumen financiero consolidado en USD.</p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="bg-white px-3 py-1 font-medium border-primary/20 text-primary">
             Nivel Inversor
           </Badge>
           <Button asChild className="shadow-lg shadow-primary/20">
-            <Link href="/explore">Nuevos Círculos</Link>
+            <Link href="/explore">Explorar Círculos</Link>
           </Button>
         </div>
       </div>
@@ -53,8 +58,8 @@ export default function Dashboard() {
             <TrendingUp className="h-4 w-4 opacity-80" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$32,500.00</div>
-            <p className="text-xs opacity-70 mt-1">Monto en alícuotas puras</p>
+            <div className="text-2xl font-bold">${capitalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <p className="text-xs opacity-70 mt-1">Monto en alícuotas puras (USD)</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-white">
@@ -63,37 +68,37 @@ export default function Dashboard() {
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">$17,500.00</div>
+            <div className="text-2xl font-bold text-foreground">${capitalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
             <p className="text-xs text-muted-foreground mt-1">Pendiente de suscripción</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Próximo Vencimiento</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Próxima Alícuota</CardTitle>
             <Calendar className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">15 May</div>
-            <p className="text-xs text-muted-foreground mt-1">Cuota total: $2,350.00</p>
+            <div className="text-2xl font-bold text-foreground">${activeCircles[0].alicuota.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">Sin contar gastos/seguros</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-secondary">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-secondary-foreground">Círculos</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-secondary-foreground">Vencimiento</CardTitle>
             <PiggyBank className="h-4 w-4 text-secondary-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-secondary-foreground">1 Activo</div>
-            <p className="text-xs text-secondary-foreground/70 mt-1">Adjudicación por Sorteo/Licit.</p>
+            <div className="text-2xl font-bold text-secondary-foreground">15 May</div>
+            <p className="text-xs text-secondary-foreground/70 mt-1">Cuota total: ${activeCircles[0].totalFee}</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-7">
-        <Card className="md:col-span-4 border-none shadow-sm">
+        <Card className="md:col-span-4 border-none shadow-sm bg-white">
           <CardHeader>
-            <CardTitle className="text-lg">Seguimiento de Alícuotas</CardTitle>
-            <CardDescription>Tu progreso hacia el Capital Suscripto.</CardDescription>
+            <CardTitle className="text-lg">Seguimiento de Capital USD</CardTitle>
+            <CardDescription>Progreso basado en Alícuota Pura / Capital Suscripto.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {activeCircles.map((circle) => (
@@ -110,23 +115,23 @@ export default function Dashboard() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span className="font-medium">Capital Pagado vs Saldo</span>
-                    <span className="text-primary font-bold">{circle.progress}%</span>
+                    <span className="text-primary font-bold">{progressPercent.toFixed(1)}%</span>
                   </div>
-                  <Progress value={circle.progress} className="h-2" />
+                  <Progress value={progressPercent} className="h-2" />
                 </div>
                 <div className="mt-5 flex items-center justify-between gap-4">
                   <div className="grid grid-cols-2 gap-6">
                     <div className="flex flex-col">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Cuota Total</span>
-                      <span className="text-sm font-bold text-primary">${circle.totalFee}</span>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Cuota Total</span>
+                      <span className="text-sm font-bold text-primary">${circle.totalFee.toFixed(2)}</span>
                     </div>
                     <div className="flex flex-col">
-                      <span className="text-[10px] uppercase font-bold text-muted-foreground">Saldo de Capital</span>
-                      <span className="text-sm font-bold text-foreground">${circle.balance.toLocaleString()}</span>
+                      <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Saldo Capital</span>
+                      <span className="text-sm font-bold text-foreground">${capitalBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" className="bg-white border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">
-                    Ver Plan de Cuotas
+                  <Button variant="outline" size="sm" asChild className="bg-white border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">
+                    <Link href={`/explore/${circle.id}`}>Ver Plan Financiero</Link>
                   </Button>
                 </div>
               </div>
@@ -134,10 +139,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-3 border-none shadow-sm">
+        <Card className="md:col-span-3 border-none shadow-sm bg-white">
           <CardHeader>
             <CardTitle className="text-lg">Historial en USD</CardTitle>
-            <CardDescription>Últimos pagos de cuotas integradas.</CardDescription>
+            <CardDescription>Pagos de cuotas integradas.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
@@ -152,7 +157,7 @@ export default function Dashboard() {
                     </TableCell>
                     <TableCell className="text-right py-4 pr-0">
                       <div className="flex flex-col items-end">
-                        <span className="font-bold text-sm text-primary">-${tx.amount}</span>
+                        <span className="font-bold text-sm text-primary">-${tx.amount.toFixed(2)}</span>
                         <span className="text-[10px] font-bold text-secondary-foreground px-1.5 py-0.5 bg-secondary rounded-full">
                           {tx.status}
                         </span>
