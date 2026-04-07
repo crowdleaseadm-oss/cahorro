@@ -60,9 +60,14 @@ export default function FAQPage() {
             <p className="text-muted-foreground text-sm">Nuestro equipo de soporte está listo para ayudarte.</p>
           </div>
         </div>
-        <button className="whitespace-nowrap bg-primary text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-transform">
+        <a 
+          href="https://wa.me/542235194889" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="whitespace-nowrap bg-primary text-white px-6 py-2.5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-transform text-center"
+        >
           Contactar Soporte
-        </button>
+        </a>
       </div>
     </div>
   )
