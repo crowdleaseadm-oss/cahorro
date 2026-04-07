@@ -68,7 +68,6 @@ export default function HowItWorks() {
             "Disciplina de ahorro forzada",
             "Acceso anticipado a capital",
             "Capital de libre destino",
-            "Comunidad de apoyo mutuo",
             "Flexibilidad en montos",
             "Gestión 100% digital"
           ].map((benefit, i) => (
