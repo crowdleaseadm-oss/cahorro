@@ -1,29 +1,34 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, query, orderBy, where, collectionGroup, limit } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, useCollection, useUser, useAuth } from '@/firebase';
+import { doc, collection, query, orderBy, where, collectionGroup } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PiggyBank, DollarSign, ArrowLeft, Gavel, UserCheck, Trophy, Shuffle, Loader2 } from 'lucide-react';
+import { PiggyBank, ArrowLeft, Gavel, UserCheck, Trophy, Shuffle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import { toast } from "@/hooks/use-toast";
 
 export default function CircleAdminDetail() {
   const params = useParams();
   const db = useFirestore();
+  const auth = useAuth();
+  const { user } = useUser();
   const [isDrawing, setIsDrawing] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (!user && auth) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [user, auth]);
 
   // 1. Fetch Circle Data
   const circleRef = useMemoFirebase(() => (db && params.id ? doc(db, 'saving_circles', params.id as string) : null), [db, params.id]);
@@ -35,12 +40,12 @@ export default function CircleAdminDetail() {
 
   // 3. Fetch Members (using Collection Group to find all memberships for this circle)
   const membersQuery = useMemoFirebase(() => {
-    if (!db || !params.id) return null;
+    if (!db || !params.id || !user) return null;
     return query(
       collectionGroup(db, 'saving_circle_memberships'),
       where('savingCircleId', '==', params.id)
     );
-  }, [db, params.id]);
+  }, [db, params.id, user]);
   const { data: members, isLoading: membersLoading } = useCollection(membersQuery);
 
   const formatNumber = (num: number) => {
@@ -60,7 +65,7 @@ export default function CircleAdminDetail() {
   };
 
   const handlePerformDraw = () => {
-    if (!circle || !members || members.length === 0) return;
+    if (!circle || !members || members.length === 0 || !db) return;
     
     const pendingMembers = members.filter(m => m.adjudicationStatus === 'Pending');
     
@@ -71,14 +76,13 @@ export default function CircleAdminDetail() {
 
     setIsDrawing(true);
 
-    // Simulate draw animation/delay
     setTimeout(() => {
       const winnersCount = Math.min(circle.drawMethodCount || 1, pendingMembers.length);
       const shuffled = [...pendingMembers].sort(() => 0.5 - Math.random());
       const winners = shuffled.slice(0, winnersCount);
 
       winners.forEach(winner => {
-        const membershipRef = doc(db!, 'users', winner.userId, 'saving_circle_memberships', winner.id);
+        const membershipRef = doc(db, 'users', winner.userId, 'saving_circle_memberships', winner.id);
         updateDocumentNonBlocking(membershipRef, { 
           adjudicationStatus: 'Adjudicated',
           adjudicationMethod: 'Draw',
@@ -94,7 +98,12 @@ export default function CircleAdminDetail() {
     }, 2000);
   };
 
-  if (!circle) return <div className="p-10 text-center">Cargando datos del círculo...</div>;
+  if (!circle) return (
+    <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+      <Loader2 className="h-10 w-10 text-primary animate-spin" />
+      <p className="text-muted-foreground">Cargando datos del círculo...</p>
+    </div>
+  );
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -105,7 +114,7 @@ export default function CircleAdminDetail() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">{circle.name}</h1>
-            <p className="text-muted-foreground">Gestión Financiera (USD)</p>
+            <p className="text-muted-foreground">Gestión de Socios e ID: {circle.id}</p>
           </div>
         </div>
         <Badge variant={circle.status === "Active" ? "default" : "secondary"} className="px-4 py-1">
