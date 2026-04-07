@@ -65,6 +65,8 @@ export default function AdminPage() {
   }, [formData]);
 
   const generateCustomId = () => {
+    // Generar formato LLLLNNNN (4 letras y 4 números)
+    // Para prototipo, usamos aleatorio para evitar colisiones sin necesidad de contador global
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const nums = "0123456789";
     let l = "";
@@ -138,7 +140,7 @@ export default function AdminPage() {
               <DialogHeader>
                 <DialogTitle>Configurar Nuevo Círculo</DialogTitle>
                 <DialogDescription>
-                  Define los parámetros financieros y la visibilidad del grupo.
+                  Define los parámetros financieros y la visibilidad del grupo. El ID se generará en formato LLLLNNNN.
                 </DialogDescription>
               </DialogHeader>
               

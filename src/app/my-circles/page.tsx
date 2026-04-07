@@ -124,14 +124,14 @@ export default function MyCirclesPage() {
                       </Badge>
                       <div>
                         <h2 className="text-2xl font-bold text-foreground leading-tight">{membership.savingCircleName}</h2>
-                        <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-tighter">ID: {membership.id}</p>
+                        <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-tighter">ID Círculo: {membership.savingCircleId}</p>
                       </div>
                     </div>
                     {!isCircleActive && (
                       <div className="mt-12 space-y-3">
                         <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                           <span>Completitud del Grupo</span>
-                          <span className="text-primary">{progress.toFixed(0)}%</span>
+                          <span className="text-primary">{circle?.currentMemberCount || 0} / {circle?.memberCapacity || '--'}</span>
                         </div>
                         <Progress value={progress} className="h-2.5 bg-white" />
                       </div>
@@ -161,7 +161,7 @@ export default function MyCirclesPage() {
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Cuotas Pagas</span>
                         <div className="flex items-center gap-2 font-bold text-xl">
                           <Target className="h-5 w-5 text-primary" />
-                          {membership.paidInstallmentsCount} Meses
+                          {membership.paidInstallmentsCount} / {circle?.totalInstallments || '--'}
                         </div>
                       </div>
                       <div className="space-y-1.5">
@@ -210,7 +210,7 @@ export default function MyCirclesPage() {
                                 </div>
                                 <div className="bg-accent/30 p-4 rounded-xl flex justify-between items-center">
                                   <span className="text-sm font-medium text-muted-foreground">Monto Total Oferta (USD):</span>
-                                  <span className="text-xl font-bold text-primary">${formatNumber(bidAmount * 2083.33)}</span>
+                                  <span className="text-xl font-bold text-primary">${formatNumber(bidAmount * (circle?.installmentValue || 0))}</span>
                                 </div>
                               </div>
                               <DialogFooter>
