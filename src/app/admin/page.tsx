@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { ShieldCheck, Users, PiggyBank, MoreHorizontal, Plus, Search, DollarSign, Calculator, Settings2, Eye, EyeOff, Lock, Trash2, AlertTriangle } from "lucide-react"
+import { ShieldCheck, Users, PiggyBank, MoreHorizontal, Plus, Search, DollarSign, Calculator, Settings2, Eye, EyeOff, Lock, Trash2, AlertTriangle, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -24,15 +24,15 @@ import { toast } from '@/hooks/use-toast';
 export default function AdminPage() {
   const db = useFirestore();
   const auth = useAuth();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [circleToDelete, setCircleToDelete] = useState<string | null>(null);
   
   useEffect(() => {
-    if (!user && auth) {
+    if (!user && !isUserLoading && auth) {
       initiateAnonymousSignIn(auth);
     }
-  }, [user, auth]);
+  }, [user, isUserLoading, auth]);
 
   const circlesRef = useMemoFirebase(() => (db ? collection(db, 'saving_circles') : null), [db]);
   const { data: circlesList, isLoading: circlesLoading } = useCollection(circlesRef);
@@ -65,8 +65,6 @@ export default function AdminPage() {
   }, [formData]);
 
   const generateCustomId = () => {
-    // Generar formato LLLLNNNN (4 letras y 4 números)
-    // Para prototipo, usamos aleatorio para evitar colisiones sin necesidad de contador global
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const nums = "0123456789";
     let l = "";
@@ -114,6 +112,13 @@ export default function AdminPage() {
     toast({ title: "Círculo Eliminado", description: `El círculo ${id} ha sido removido.` });
     setCircleToDelete(null);
   };
+
+  if (isUserLoading || !user) return (
+    <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+      <Loader2 className="h-10 w-10 text-primary animate-spin" />
+      <p className="text-muted-foreground">Autenticando administrador...</p>
+    </div>
+  );
 
   const installmentOptions = Array.from({ length: 10 }, (_, i) => (i + 1) * 12);
   const countOptions = Array.from({ length: 6 }, (_, i) => i);
@@ -402,11 +407,9 @@ export default function AdminPage() {
                           <DropdownMenuItem asChild>
                             <Link href={`/admin/circles/${circle.id}`}>Gestionar Miembros</Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild onSelect={(e) => { e.preventDefault(); setCircleToDelete(circle.id); }}>
-                            <div className="text-destructive font-bold flex items-center gap-2 cursor-pointer w-full">
-                              <Trash2 className="h-4 w-4" />
-                              Eliminar Círculo
-                            </div>
+                          <DropdownMenuItem onSelect={() => setCircleToDelete(circle.id)} className="text-destructive font-bold cursor-pointer">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Eliminar Círculo
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -419,7 +422,6 @@ export default function AdminPage() {
         </CardContent>
       </Card>
 
-      {/* Confirmation Dialog for Deletion */}
       <AlertDialog open={!!circleToDelete} onOpenChange={(open) => !open && setCircleToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
