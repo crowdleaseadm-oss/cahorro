@@ -12,17 +12,17 @@ service cloud.firestore {
     }
 
     // --- REGLAS PARA COLLECTION GROUPS ---
-    // Estas reglas son fundamentales para que las consultas 'collectionGroup' funcionen.
+    // Indispensables para que las consultas 'collectionGroup' funcionen.
     // Permiten buscar a través de todas las subcolecciones con estos nombres.
     
     match /{path=**}/saving_circle_memberships/{membershipId} {
-      // Permite listar y leer membresías de cualquier círculo si el usuario está autenticado.
-      allow list, get: if isSignedIn();
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
 
     match /{path=**}/bids/{bidId} {
-      // Permite listar y leer licitaciones de cualquier círculo si el usuario está autenticado.
-      allow list, get: if isSignedIn();
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
     }
 
     // --- REGLAS POR COLECCIÓN ESPECÍFICA ---
@@ -30,13 +30,11 @@ service cloud.firestore {
     // Usuarios y sus membresías privadas
     match /users/{userId} {
       allow get: if isSignedIn();
-      allow list: if isSignedIn(); // Permitido para administración en prototipo
+      allow list: if isSignedIn();
       allow create, update: if isOwner(userId) || isSignedIn();
       allow delete: if isSignedIn();
 
       match /saving_circle_memberships/{membershipId} {
-        // Un usuario puede gestionar sus propias membresías, 
-        // y los admins (cualquier usuario en este prototipo) pueden leerlas/editarlas.
         allow read, write: if isSignedIn();
       }
     }
@@ -45,16 +43,13 @@ service cloud.firestore {
     match /saving_circles/{circleId} {
       // Los planes son públicos para fomentar la suscripción
       allow read: if true;
-      // Cualquier usuario autenticado puede crear o actualizar (admin-style para prototipo)
+      // Cualquier usuario autenticado puede crear o gestionar (estilo admin para prototipo)
       allow create, update: if isSignedIn();
       allow delete: if isSignedIn();
 
       match /bids/{bidId} {
-        // Las licitaciones son visibles para usuarios autenticados
         allow read: if isSignedIn();
-        // Un socio puede crear su propia oferta de licitación
         allow create: if isSignedIn();
-        // Los administradores pueden adjudicar (actualizar estado)
         allow update, delete: if isSignedIn();
       }
     }
