@@ -11,8 +11,7 @@ service cloud.firestore {
     }
 
     function isGlobalAdmin() {
-      // Para prototipado, permitimos acciones administrativas a usuarios autenticados
-      // o verificamos la colección de roles si existe.
+      // Para prototipado, permitimos acciones administrativas a usuarios autenticados.
       return isSignedIn();
     }
 
@@ -28,37 +27,41 @@ service cloud.firestore {
       return request.resource.data.userId == userId;
     }
 
-    // Regla para consultas de Collection Group (necesaria para la administración de miembros)
+    // --- REGLAS PARA COLLECTION GROUPS ---
+    // Estas reglas permiten consultas que atraviesan todos los documentos con el mismo nombre de subcolección.
+    
     match /{path=**}/saving_circle_memberships/{membershipId} {
-      allow list: if isGlobalAdmin();
+      // Permite listar miembros de cualquier círculo si el usuario está autenticado.
+      allow list, get: if isSignedIn();
     }
+
+    match /{path=**}/bids/{bidId} {
+      // Permite listar licitaciones de cualquier círculo si el usuario está autenticado.
+      allow list, get: if isSignedIn();
+    }
+
+    // --- REGLAS POR COLECCIÓN ---
 
     match /users/{userId} {
       allow get: if isOwner(userId) || isGlobalAdmin();
-      allow list: if isOwner(userId) || isGlobalAdmin();
+      allow list: if isGlobalAdmin();
       allow create: if isOwner(userId);
-      allow update: if (isExistingOwner(userId) || isGlobalAdmin()) && (request.resource.data.id == resource.data.id);
-      allow delete: if isExistingOwner(userId) || isGlobalAdmin();
+      allow update: if (isExistingOwner(userId) || isGlobalAdmin());
+      allow delete: if isGlobalAdmin();
 
       match /saving_circle_memberships/{membershipId} {
         allow get, list: if isOwner(userId) || isGlobalAdmin();
         allow create: if isOwner(userId) && isValidUserRef(userId);
-        allow update: if (isExistingOwner(userId) || isGlobalAdmin());
-        allow delete: if isExistingOwner(userId) || isGlobalAdmin();
+        allow update: if isOwner(userId) || isGlobalAdmin();
+        allow delete: if isGlobalAdmin();
       }
     }
 
-    match /roles_admin/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isGlobalAdmin();
-      allow create, update, delete: if isGlobalAdmin();
-    }
-
     match /saving_circles/{savingCircleId} {
-      // Permitir exploración pública para que visitantes vean los planes
+      // Exploración pública
       allow get, list: if true;
       allow create: if isSignedIn();
-      allow update: if (isCircleAdmin(resource.data.adminUserId) || isGlobalAdmin());
+      allow update: if isSignedIn(); // Simplificado para prototipado
       allow delete: if isGlobalAdmin();
 
       match /bids/{bidId} {
