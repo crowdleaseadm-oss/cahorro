@@ -13,7 +13,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { doc, collection, serverTimestamp, increment } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { toast } from '@/hooks/use-toast';
 
 export default function CirclePlanPage() {
@@ -125,16 +125,13 @@ export default function CirclePlanPage() {
     };
   });
 
-  const totalPaidEstimate = installments.reduce((acc, inst) => acc + inst.currentTotal, 0);
-  const cftAverage = ((totalPaidEstimate - capitalTotal) / capitalTotal) * 100;
-  const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
-
   const handleSubscribe = () => {
     if (!user) {
       toast({ title: "Inicia sesión", description: "Debes estar registrado para unirte a un círculo.", variant: "destructive" });
       return;
     }
     if (!db) return;
+    const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
     if (isFull) {
       toast({ title: "Círculo Completo", description: "Este grupo ya ha alcanzado su capacidad máxima.", variant: "destructive" });
       return;
@@ -156,9 +153,15 @@ export default function CirclePlanPage() {
       createdAt: serverTimestamp(),
     };
 
-    const membershipsCol = collection(db, 'users', user.uid, 'saving_circle_memberships');
-    addDocumentNonBlocking(membershipsCol, membershipData);
+    // 1. Guardar en el perfil del usuario (para "Mis Círculos")
+    const userMembershipRef = doc(collection(db, 'users', user.uid, 'saving_circle_memberships'));
+    setDocumentNonBlocking(userMembershipRef, { ...membershipData, id: userMembershipRef.id }, { merge: true });
     
+    // 2. Guardar en la subcolección del círculo (para "Admin View" - Evita collectionGroup)
+    const circleMemberRef = doc(db, 'saving_circles', circle.id, 'members', user.uid);
+    setDocumentNonBlocking(circleMemberRef, { ...membershipData, id: userMembershipRef.id }, { merge: true });
+
+    // 3. Incrementar contador del círculo
     const circleDocRef = doc(db, 'saving_circles', circle.id);
     updateDocumentNonBlocking(circleDocRef, { currentMemberCount: increment(1) });
 
@@ -188,7 +191,6 @@ export default function CirclePlanPage() {
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-8">
           <Card className="border-none shadow-sm bg-white overflow-hidden">
-            <div className={`h-2 w-full ${isFull ? 'bg-orange-500' : 'bg-primary'}`} />
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
@@ -196,8 +198,8 @@ export default function CirclePlanPage() {
                   <CardDescription className="text-lg">Capital Suscripto: {formatCurrency(capitalTotal)} USD</CardDescription>
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                  <Badge className={`${isFull ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'} border-none font-bold px-4 py-1`}>
-                    {isFull ? 'ACTIVO (Completo)' : 'ABIERTO'}
+                  <Badge className={`${(circle.currentMemberCount || 0) >= circle.memberCapacity ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'} border-none font-bold px-4 py-1`}>
+                    {(circle.currentMemberCount || 0) >= circle.memberCapacity ? 'ACTIVO (Completo)' : 'ABIERTO'}
                   </Badge>
                   {circle.isPrivate && (
                     <Badge variant="outline" className="gap-1 border-orange-200 text-orange-700 bg-orange-50">
@@ -251,7 +253,9 @@ export default function CirclePlanPage() {
                     </p>
                   </div>
                   <div className="text-center md:text-right">
-                    <div className="text-4xl font-black text-primary">{cftAverage.toFixed(2)}%</div>
+                    <div className="text-4xl font-black text-primary">
+                      {(((installments.reduce((acc, inst) => acc + inst.currentTotal, 0) - capitalTotal) / capitalTotal) * 100).toFixed(2)}%
+                    </div>
                     <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Carga Total del Plan</span>
                   </div>
                 </div>
@@ -292,7 +296,6 @@ export default function CirclePlanPage() {
                             <DialogContent className="max-w-md">
                               <DialogHeader>
                                 <DialogTitle className="text-primary">Desglose de Cuota #{inst.num}</DialogTitle>
-                                <DialogDescription>Componentes calculados en USD.</DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4 py-4">
                                 <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
@@ -346,7 +349,6 @@ export default function CirclePlanPage() {
                 <ShieldCheck className="h-6 w-6" />
                 Suscripción en USD
               </CardTitle>
-              <CardDescription className="text-white/80">Capital garantizado bajo suscripción colectiva.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
@@ -360,36 +362,20 @@ export default function CirclePlanPage() {
                 </div>
               </div>
 
-              <div className="space-y-4">
-                 <h4 className="text-xs font-bold uppercase tracking-widest opacity-70">Resumen del Plan:</h4>
-                 <div className="bg-white/10 p-4 rounded-xl space-y-3">
-                    <p className="text-[10px] leading-relaxed">
-                      • <strong>Administrativo:</strong> {(adminRate * 100).toFixed(1)}% de la alícuota pura (US$ {adminFeeMensual.toFixed(2)}).
-                    </p>
-                    <p className="text-[10px] leading-relaxed">
-                      • <strong>Seguro Vida:</strong> {(lifeInsRate * 100).toFixed(2)}% sobre el saldo de capital puro. Disminuye mensualmente.
-                    </p>
-                    <p className="text-[10px] leading-relaxed">
-                      • <strong>Suscripción:</strong> {(subRate * 100).toFixed(1)}% del capital, prorrateado en los primeros {installmentsWithSubFee} meses.
-                    </p>
-                 </div>
-              </div>
-
               <Button 
                 variant="secondary" 
-                className="w-full h-14 text-lg font-bold shadow-lg hover:scale-[1.02] transition-transform"
+                className="w-full h-14 text-lg font-bold shadow-lg"
                 onClick={handleSubscribe}
-                disabled={isSubscribing || isFull}
+                disabled={isSubscribing || (circle.currentMemberCount || 0) >= circle.memberCapacity}
               >
                 {isSubscribing ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
-                ) : isFull ? (
+                ) : (circle.currentMemberCount || 0) >= circle.memberCapacity ? (
                   'Círculo Completo'
                 ) : (
                   'Unirme al Círculo'
                 )}
               </Button>
-              <p className="text-[10px] text-center text-white/60">Operación sujeta a aprobación de contrato legal.</p>
             </CardContent>
           </Card>
         </div>

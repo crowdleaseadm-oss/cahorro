@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, useCollection, useUser, useAuth } from '@/firebase';
-import { doc, collection, query, orderBy, where, collectionGroup } from 'firebase/firestore';
+import { doc, collection, query, orderBy, where } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,6 @@ export default function CircleAdminDetail() {
 
   useEffect(() => {
     setMounted(true);
-    // Aseguramos que el admin esté autenticado para evitar errores de permisos
     if (!user && !isUserLoading && auth) {
       initiateAnonymousSignIn(auth);
     }
@@ -39,13 +38,10 @@ export default function CircleAdminDetail() {
   const bidsRef = useMemoFirebase(() => (db && params.id && user ? query(collection(db, 'saving_circles', params.id as string, 'bids'), orderBy('installmentsOffered', 'desc')) : null), [db, params.id, user]);
   const { data: bids, isLoading: bidsLoading } = useCollection(bidsRef);
 
-  // 3. Fetch Members (using Collection Group to find all memberships for this circle)
+  // 3. Fetch Members (Consultamos directamente la subcolección del círculo para evitar errores de permisos de collectionGroup)
   const membersQuery = useMemoFirebase(() => {
     if (!db || !params.id || !user) return null;
-    return query(
-      collectionGroup(db, 'saving_circle_memberships'),
-      where('savingCircleId', '==', params.id)
-    );
+    return collection(db, 'saving_circles', params.id as string, 'members');
   }, [db, params.id, user]);
   const { data: members, isLoading: membersLoading } = useCollection(membersQuery);
 
@@ -55,12 +51,27 @@ export default function CircleAdminDetail() {
   };
 
   const handleAdjudicateBid = (bid: any) => {
-    if (!db) return;
-    const bidDocRef = doc(db, 'saving_circles', params.id as string, 'bids', bid.id);
+    if (!db || !circle) return;
+    
+    // Actualizar estado de la licitación
+    const bidDocRef = doc(db, 'saving_circles', circle.id, 'bids', bid.id);
     updateDocumentNonBlocking(bidDocRef, { status: 'Won' });
 
-    const membershipRef = doc(db, 'users', bid.userId, 'saving_circle_memberships', bid.membershipId);
-    updateDocumentNonBlocking(membershipRef, { adjudicationStatus: 'Adjudicated' });
+    // Actualizar membresía bajo el usuario
+    const userMembershipRef = doc(db, 'users', bid.userId, 'saving_circle_memberships', bid.membershipId);
+    updateDocumentNonBlocking(userMembershipRef, { 
+      adjudicationStatus: 'Adjudicated',
+      adjudicationMethod: 'Bid',
+      adjudicationDate: new Date().toISOString()
+    });
+
+    // Actualizar membresía duplicada bajo el círculo (para consistencia admin)
+    const circleMemberRef = doc(db, 'saving_circles', circle.id, 'members', bid.userId);
+    updateDocumentNonBlocking(circleMemberRef, { 
+      adjudicationStatus: 'Adjudicated',
+      adjudicationMethod: 'Bid',
+      adjudicationDate: new Date().toISOString()
+    });
     
     toast({ title: "Licitación Adjudicada", description: `El socio ha sido notificado.` });
   };
@@ -83,12 +94,19 @@ export default function CircleAdminDetail() {
       const winners = shuffled.slice(0, winnersCount);
 
       winners.forEach(winner => {
-        const membershipRef = doc(db, 'users', winner.userId, 'saving_circle_memberships', winner.id);
-        updateDocumentNonBlocking(membershipRef, { 
+        const updateData = { 
           adjudicationStatus: 'Adjudicated',
           adjudicationMethod: 'Draw',
           adjudicationDate: new Date().toISOString()
-        });
+        };
+
+        // Actualizar bajo el usuario
+        const userMembershipRef = doc(db, 'users', winner.userId, 'saving_circle_memberships', winner.id);
+        updateDocumentNonBlocking(userMembershipRef, updateData);
+
+        // Actualizar bajo el círculo
+        const circleMemberRef = doc(db, 'saving_circles', circle.id, 'members', winner.userId);
+        updateDocumentNonBlocking(circleMemberRef, updateData);
       });
 
       setIsDrawing(false);
@@ -99,18 +117,10 @@ export default function CircleAdminDetail() {
     }, 2000);
   };
 
-  // Estado de carga inicial o falta de usuario
-  if (isUserLoading || !user) return (
+  if (isUserLoading || !user || !circle) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
       <Loader2 className="h-10 w-10 text-primary animate-spin" />
-      <p className="text-muted-foreground">Autenticando sesión administrativa...</p>
-    </div>
-  );
-
-  if (!circle) return (
-    <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
-      <Loader2 className="h-10 w-10 text-primary animate-spin" />
-      <p className="text-muted-foreground">Cargando datos del círculo...</p>
+      <p className="text-muted-foreground">Autenticando y cargando datos...</p>
     </div>
   );
 
@@ -123,35 +133,35 @@ export default function CircleAdminDetail() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">{circle.name}</h1>
-            <p className="text-muted-foreground">Gestión de Socios e ID: {circle.id}</p>
+            <p className="text-muted-foreground">ID: {circle.id}</p>
           </div>
         </div>
-        <Badge variant={circle.status === "Active" ? "default" : "secondary"} className="px-4 py-1">
+        <Badge variant={circle.status === "Active" ? "default" : "secondary"}>
           {circle.status === "Active" ? "Círculo Activo" : circle.status}
         </Badge>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
         <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Capital Suscripto</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase">Capital</CardTitle></CardHeader>
           <CardContent><div className="text-2xl font-bold">${formatNumber(circle.targetCapital)}</div></CardContent>
         </Card>
         <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Alícuota Pura</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase">Alícuota</CardTitle></CardHeader>
           <CardContent><div className="text-2xl font-bold text-primary">${circle.installmentValue.toFixed(2)}</div></CardContent>
         </Card>
         <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Cupos Sorteo</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase">Sorteos</CardTitle></CardHeader>
           <CardContent><div className="text-2xl font-bold">{circle.drawMethodCount}</div></CardContent>
         </Card>
         <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Cupos Licitación</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase">Licitaciones</CardTitle></CardHeader>
           <CardContent><div className="text-2xl font-bold">{circle.bidMethodCount}</div></CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="members" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-xl bg-white border border-border shadow-sm">
+        <TabsList className="grid w-full grid-cols-3 max-w-xl bg-white border">
           <TabsTrigger value="members">Miembros ({members?.length || 0})</TabsTrigger>
           <TabsTrigger value="bids">Licitaciones ({bids?.length || 0})</TabsTrigger>
           <TabsTrigger value="draw">Sorteo Mensual</TabsTrigger>
@@ -161,7 +171,6 @@ export default function CircleAdminDetail() {
           <Card className="border-none shadow-sm">
             <CardHeader>
               <CardTitle>Listado de Miembros</CardTitle>
-              <CardDescription>Supervisión de estados de adjudicación y capital integrado.</CardDescription>
             </CardHeader>
             <CardContent>
               {membersLoading ? (
@@ -170,7 +179,6 @@ export default function CircleAdminDetail() {
                 <div className="bg-muted/30 p-12 text-center rounded-xl">
                    <PiggyBank className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-30" />
                    <h3 className="text-lg font-bold">Sin miembros registrados</h3>
-                   <p className="text-muted-foreground">Los usuarios deben unirse desde la sección de exploración.</p>
                 </div>
               ) : (
                 <Table>
@@ -180,22 +188,18 @@ export default function CircleAdminDetail() {
                       <TableHead>Fecha Ingreso</TableHead>
                       <TableHead>Capital Pagado</TableHead>
                       <TableHead>Estado Adjudicación</TableHead>
-                      <TableHead>Estado Cuenta</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {members.map((member) => (
                       <TableRow key={member.id}>
-                        <TableCell className="font-mono text-[10px]">{member.id}</TableCell>
+                        <TableCell className="font-mono text-[10px]">{member.id.slice(-8).toUpperCase()}</TableCell>
                         <TableCell className="text-xs">{new Date(member.joiningDate).toLocaleDateString()}</TableCell>
                         <TableCell className="font-bold">${formatNumber(member.capitalPaid)}</TableCell>
                         <TableCell>
                           <Badge variant={member.adjudicationStatus === 'Adjudicated' ? "default" : "outline"} className={member.adjudicationStatus === 'Adjudicated' ? "bg-green-100 text-green-700 border-none" : ""}>
                             {member.adjudicationStatus === 'Adjudicated' ? 'Adjudicado' : 'Pendiente'}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                           <Badge variant="secondary">{member.status}</Badge>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -213,14 +217,13 @@ export default function CircleAdminDetail() {
                 <Gavel className="h-5 w-5 text-primary" />
                 Ofertas de Licitación
               </CardTitle>
-              <CardDescription>Ranking de ofertas para adjudicación anticipada.</CardDescription>
             </CardHeader>
             <CardContent>
               {bidsLoading ? (
                 <div className="p-8 text-center">Cargando ofertas...</div>
               ) : !bids || bids.length === 0 ? (
                 <div className="p-12 text-center bg-muted/20 rounded-xl">
-                  <p className="text-muted-foreground">No hay ofertas de licitación en este momento.</p>
+                  <p className="text-muted-foreground">No hay ofertas de licitación.</p>
                 </div>
               ) : (
                 <Table>
@@ -228,7 +231,7 @@ export default function CircleAdminDetail() {
                     <TableRow>
                       <TableHead>Miembro</TableHead>
                       <TableHead>Cuotas Ofertadas</TableHead>
-                      <TableHead>Monto USD (Alícuota)</TableHead>
+                      <TableHead>Monto USD</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead className="text-right">Acción</TableHead>
                     </TableRow>
@@ -236,24 +239,15 @@ export default function CircleAdminDetail() {
                   <TableBody>
                     {bids.map((bid) => (
                       <TableRow key={bid.id}>
-                        <TableCell className="font-bold">{bid.userName || "Socio Registrado"}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-primary border-primary/20">
-                            {bid.installmentsOffered} cuotas
-                          </Badge>
-                        </TableCell>
+                        <TableCell className="font-bold">{bid.userName || "Socio"}</TableCell>
+                        <TableCell>{bid.installmentsOffered} cuotas</TableCell>
                         <TableCell className="font-bold">${formatNumber(bid.amountInUsd)}</TableCell>
                         <TableCell>
-                          <Badge variant={bid.status === "Won" ? "default" : "secondary"}>
-                            {bid.status === "Won" ? "Adjudicado" : "Pendiente"}
-                          </Badge>
+                          <Badge variant={bid.status === "Won" ? "default" : "secondary"}>{bid.status}</Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           {bid.status === "Pending" && (
-                            <Button size="sm" onClick={() => handleAdjudicateBid(bid)} className="gap-2">
-                              <UserCheck className="h-4 w-4" />
-                              Adjudicar
-                            </Button>
+                            <Button size="sm" onClick={() => handleAdjudicateBid(bid)}>Adjudicar</Button>
                           )}
                         </TableCell>
                       </TableRow>
@@ -266,96 +260,35 @@ export default function CircleAdminDetail() {
         </TabsContent>
 
         <TabsContent value="draw" className="mt-6">
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="md:col-span-2 border-none shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shuffle className="h-5 w-5 text-primary" />
-                  Sorteo de Adjudicación
-                </CardTitle>
-                <CardDescription>
-                  Realiza el sorteo mensual entre los miembros que aún no han sido adjudicados.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Miembros en el Bombo</p>
-                    <p className="text-3xl font-bold text-primary">
-                      {members?.filter(m => m.adjudicationStatus === 'Pending').length || 0}
-                    </p>
-                  </div>
-                  <div className="space-y-1 text-right">
-                    <p className="text-sm font-medium text-muted-foreground">Cupos Disponibles</p>
-                    <p className="text-3xl font-bold text-foreground">{circle.drawMethodCount}</p>
-                  </div>
+          <Card className="max-w-2xl border-none shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shuffle className="h-5 w-5 text-primary" />
+                Sorteo Mensual
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="bg-primary/5 p-6 rounded-2xl border border-primary/10 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Candidatos</p>
+                  <p className="text-3xl font-bold text-primary">
+                    {members?.filter(m => m.adjudicationStatus === 'Pending').length || 0}
+                  </p>
                 </div>
-
-                <div className="space-y-4">
-                   <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Condiciones del Sorteo:</h4>
-                   <ul className="space-y-2">
-                      <li className="flex items-center gap-2 text-sm">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        Solo participan miembros con estado de cuenta "Active".
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        Se seleccionarán {circle.drawMethodCount} ganadores de forma aleatoria.
-                      </li>
-                      <li className="flex items-center gap-2 text-sm">
-                        <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                        La adjudicación es irreversible una vez ejecutada.
-                      </li>
-                   </ul>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-muted-foreground">Cupos Sorteo</p>
+                  <p className="text-3xl font-bold">{circle.drawMethodCount}</p>
                 </div>
-
-                <Button 
-                  className="w-full h-14 text-lg font-bold gap-3 shadow-xl shadow-primary/20"
-                  onClick={handlePerformDraw}
-                  disabled={isDrawing || !members || members.filter(m => m.adjudicationStatus === 'Pending').length === 0}
-                >
-                  {isDrawing ? (
-                    <>
-                      <Loader2 className="h-6 w-6 animate-spin" />
-                      Mezclando Bombo...
-                    </>
-                  ) : (
-                    <>
-                      <Shuffle className="h-6 w-6" />
-                      Ejecutar Sorteo Mensual
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-sm bg-accent/20">
-              <CardHeader>
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Trophy className="h-4 w-4 text-yellow-600" />
-                  Últimos Adjudicados
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {members?.filter(m => m.adjudicationStatus === 'Adjudicated').length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-8 italic">No hay adjudicaciones registradas aún.</p>
-                ) : (
-                  members?.filter(m => m.adjudicationStatus === 'Adjudicated')
-                    .sort((a, b) => new Date(b.adjudicationDate || 0).getTime() - new Date(a.adjudicationDate || 0).getTime())
-                    .slice(0, 5)
-                    .map((winner) => (
-                      <div key={winner.id} className="bg-white p-3 rounded-xl shadow-sm border border-border/50">
-                        <div className="flex justify-between items-start mb-1">
-                          <span className="text-[10px] font-bold text-primary uppercase">{winner.adjudicationMethod === 'Draw' ? 'Sorteo' : 'Licitación'}</span>
-                          <span className="text-[9px] text-muted-foreground">{winner.adjudicationDate ? new Date(winner.adjudicationDate).toLocaleDateString() : '-'}</span>
-                        </div>
-                        <p className="text-xs font-bold truncate">Socio ID: {winner.id.slice(-6).toUpperCase()}</p>
-                      </div>
-                    ))
-                )}
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+              <Button 
+                className="w-full h-14 text-lg font-bold gap-3"
+                onClick={handlePerformDraw}
+                disabled={isDrawing || !members || members.filter(m => m.adjudicationStatus === 'Pending').length === 0}
+              >
+                {isDrawing ? <Loader2 className="animate-spin" /> : "Ejecutar Sorteo"}
+              </Button>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
