@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, serverTimestamp } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -26,7 +27,7 @@ export default function AdminPage() {
   const [formData, setFormData] = useState({
     name: '',
     targetCapital: 50000,
-    totalInstallments: 24,
+    totalInstallments: 84,
     subscriptionFeeRate: 0.03,
     administrativeFeeRate: 0.02,
     drawMethodCount: 1,
@@ -55,12 +56,16 @@ export default function AdminPage() {
       status: 'Active',
       creationDate: new Date().toISOString(),
       createdAt: serverTimestamp(),
-      adminUserId: 'system-admin', // Should be real ID from useUser()
+      adminUserId: 'system-admin',
     };
 
     addDocumentNonBlocking(collection(db, 'saving_circles'), newCircle);
     setIsDialogOpen(false);
   };
+
+  // Generate options
+  const installmentOptions = Array.from({ length: 10 }, (_, i) => (i + 1) * 12);
+  const countOptions = Array.from({ length: 6 }, (_, i) => i);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -115,14 +120,20 @@ export default function AdminPage() {
 
                 <div className="grid grid-cols-2 gap-4 border-t pt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="installments">Cuotas (Múltiplo de 12)</Label>
-                    <Input 
-                      id="installments" 
-                      type="number" 
-                      step="12" 
-                      value={formData.totalInstallments}
-                      onChange={(e) => setFormData({...formData, totalInstallments: Number(e.target.value)})}
-                    />
+                    <Label htmlFor="installments">Cuotas</Label>
+                    <Select 
+                      value={formData.totalInstallments.toString()} 
+                      onValueChange={(val) => setFormData({...formData, totalInstallments: Number(val)})}
+                    >
+                      <SelectTrigger id="installments">
+                        <SelectValue placeholder="Seleccione cuotas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {installmentOptions.map(opt => (
+                          <SelectItem key={opt} value={opt.toString()}>{opt} meses</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Capacidad Total</Label>
@@ -135,23 +146,35 @@ export default function AdminPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Sorteos por Ronda</Label>
-                    <Input 
-                      type="number" 
-                      min="1" 
-                      max="5" 
-                      value={formData.drawMethodCount}
-                      onChange={(e) => setFormData({...formData, drawMethodCount: Number(e.target.value)})}
-                    />
+                    <Select 
+                      value={formData.drawMethodCount.toString()} 
+                      onValueChange={(val) => setFormData({...formData, drawMethodCount: Number(val)})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="0-5" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countOptions.map(opt => (
+                          <SelectItem key={opt} value={opt.toString()}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Licitaciones por Ronda</Label>
-                    <Input 
-                      type="number" 
-                      min="1" 
-                      max="5" 
-                      value={formData.bidMethodCount}
-                      onChange={(e) => setFormData({...formData, bidMethodCount: Number(e.target.value)})}
-                    />
+                    <Select 
+                      value={formData.bidMethodCount.toString()} 
+                      onValueChange={(val) => setFormData({...formData, bidMethodCount: Number(val)})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="0-5" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countOptions.map(opt => (
+                          <SelectItem key={opt} value={opt.toString()}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -184,19 +207,6 @@ export default function AdminPage() {
             </DialogContent>
           </Dialog>
         </div>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-3">
-        <Card className="border-none shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Círculos Registrados</CardTitle>
-            <DollarSign className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{circlesList?.length || 0}</div>
-            <div className="text-xs text-muted-foreground mt-1">Configurados en USD</div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card className="border-none shadow-sm">
