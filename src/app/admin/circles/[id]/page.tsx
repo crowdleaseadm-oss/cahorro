@@ -25,6 +25,7 @@ export default function CircleAdminDetail() {
 
   useEffect(() => {
     setMounted(true);
+    // Aseguramos que el admin esté autenticado para evitar errores de permisos
     if (!user && !isUserLoading && auth) {
       initiateAnonymousSignIn(auth);
     }
@@ -98,6 +99,7 @@ export default function CircleAdminDetail() {
     }, 2000);
   };
 
+  // Estado de carga inicial o falta de usuario
   if (isUserLoading || !user) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
       <Loader2 className="h-10 w-10 text-primary animate-spin" />
