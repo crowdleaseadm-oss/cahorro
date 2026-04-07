@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -23,7 +24,6 @@ export default function AdminPage() {
   const { user } = useUser();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  // Garantizar que el administrador esté autenticado (aunque sea anónimamente) para crear círculos
   useEffect(() => {
     if (!user && auth) {
       initiateAnonymousSignIn(auth);
@@ -33,26 +33,31 @@ export default function AdminPage() {
   const circlesRef = useMemoFirebase(() => (db ? collection(db, 'saving_circles') : null), [db]);
   const { data: circlesList, isLoading: circlesLoading } = useCollection(circlesRef);
 
-  // Form State
   const [formData, setFormData] = useState({
     name: '',
     targetCapital: 50000,
     totalInstallments: 84,
     subscriptionFeeRate: 0.03,
-    administrativeFeeRate: 0.02,
+    administrativeFeeRate: 0.10, // 10% de la alícuota
     drawMethodCount: 1,
     bidMethodCount: 1,
   });
 
   const calculations = useMemo(() => {
     const alicuota = formData.targetCapital / formData.totalInstallments;
-    const subFee = alicuota * formData.subscriptionFeeRate;
-    const adminFee = alicuota * formData.administrativeFeeRate;
-    const lifeInsurance = formData.targetCapital * 0.0009;
-    const totalMonthly = alicuota + subFee + adminFee + lifeInsurance;
+    // Gasto admin: 10% de la alícuota
+    const adminFee = alicuota * 0.10;
+    // Seguro de vida inicial: 0.09% del capital total
+    const lifeInsuranceInicial = formData.targetCapital * 0.0009;
+    // Suscripción: 3% prorrateado en el primer 20%
+    const totalSubFee = formData.targetCapital * 0.03;
+    const cuotasSuscripcion = Math.ceil(formData.totalInstallments * 0.20);
+    const subFeeMensual = totalSubFee / cuotasSuscripcion;
+
+    const totalCuotaInicial = alicuota + adminFee + lifeInsuranceInicial + subFeeMensual;
     const capacity = formData.totalInstallments * (formData.drawMethodCount + formData.bidMethodCount);
     
-    return { alicuota, totalMonthly, capacity, lifeInsurance };
+    return { alicuota, adminFee, totalCuotaInicial, capacity, lifeInsuranceInicial };
   }, [formData]);
 
   const handleCreateCircle = () => {
@@ -67,7 +72,7 @@ export default function AdminPage() {
       status: 'Active',
       creationDate: new Date().toISOString(),
       createdAt: serverTimestamp(),
-      adminUserId: user.uid, // Vincular con el ID real del usuario autenticado
+      adminUserId: user.uid,
     };
 
     addDocumentNonBlocking(collection(db, 'saving_circles'), newCircle);
@@ -88,8 +93,6 @@ export default function AdminPage() {
           <p className="text-muted-foreground mt-1">Gestión de Círculos de Ahorro en USD.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="bg-white border-border">Reportes USD</Button>
-          
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="shadow-lg shadow-primary/20 gap-2">
@@ -191,22 +194,25 @@ export default function AdminPage() {
                 <div className="bg-accent/30 p-4 rounded-xl space-y-3">
                   <div className="flex items-center gap-2 font-bold text-sm text-primary mb-1">
                     <Calculator className="h-4 w-4" />
-                    Previsualización Financiera
+                    Previsualización Financiera (Cuota 1)
                   </div>
-                  <div className="grid grid-cols-3 gap-4 text-xs">
+                  <div className="grid grid-cols-3 gap-4 text-[10px]">
                     <div>
-                      <span className="text-muted-foreground block">Alícuota Pura</span>
+                      <span className="text-muted-foreground block">Alícuota</span>
                       <span className="font-bold text-foreground">${calculations.alicuota.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block">Seguro (0.09%)</span>
-                      <span className="font-bold text-foreground">${calculations.lifeInsurance.toFixed(2)}</span>
+                      <span className="text-muted-foreground block">Admin (10%)</span>
+                      <span className="font-bold text-foreground">${calculations.adminFee.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block">Cuota Total</span>
-                      <span className="font-bold text-primary text-sm">${calculations.totalMonthly.toFixed(2)}</span>
+                      <span className="text-muted-foreground block">Total Inicial</span>
+                      <span className="font-bold text-primary text-sm">${calculations.totalCuotaInicial.toFixed(2)}</span>
                     </div>
                   </div>
+                  <p className="text-[9px] text-muted-foreground italic mt-1">
+                    * El seguro de vida disminuirá mensualmente con el saldo de capital.
+                  </p>
                 </div>
               </div>
 
@@ -239,7 +245,7 @@ export default function AdminPage() {
                 <TableHead>Nombre / ID</TableHead>
                 <TableHead>Cap. Suscripto</TableHead>
                 <TableHead>Cuotas</TableHead>
-                <TableHead>Alícuota Pura</TableHead>
+                <TableHead>Alícuota</TableHead>
                 <TableHead>Estado Llenado</TableHead>
                 <TableHead>Estado Admin</TableHead>
                 <TableHead></TableHead>

@@ -66,10 +66,12 @@ export default function ExplorePage() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
           {filteredCircles.map((circle) => {
             const alicuota = circle.targetCapital / circle.totalInstallments;
-            const subFee = alicuota * (circle.subscriptionFeeRate || 0);
-            const adminFee = alicuota * (circle.administrativeFeeRate || 0);
-            const insurance = circle.targetCapital * 0.0009;
-            const totalFee = alicuota + subFee + adminFee + insurance;
+            const adminFee = alicuota * 0.10;
+            const insurance = circle.targetCapital * 0.0009; // Seguro sobre saldo inicial
+            const totalSubFee = circle.targetCapital * 0.03;
+            const subFeeMensual = totalSubFee / Math.ceil(circle.totalInstallments * 0.20);
+            
+            const totalFeeInicial = alicuota + adminFee + insurance + subFeeMensual;
             const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
 
             return (
@@ -99,18 +101,19 @@ export default function ExplorePage() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Cuota Total</span>
+                      <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Cuota Inicial</span>
                       <div className="font-bold text-primary flex items-center gap-1">
-                        ${totalFee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ${totalFeeInicial.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs space-y-1">
-                              <p className="text-xs font-bold">Desglose mensual:</p>
+                              <p className="text-xs font-bold">Conceptos de cuota inicial:</p>
                               <p className="text-[10px]">Alícuota: ${alicuota.toFixed(2)}</p>
-                              <p className="text-[10px]">Gastos + Seguro: ${(subFee + adminFee + insurance).toFixed(2)}</p>
+                              <p className="text-[10px]">Gastos Admin (10%): ${adminFee.toFixed(2)}</p>
+                              <p className="text-[10px]">Suscripción + Seguro: ${(subFeeMensual + insurance).toFixed(2)}</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -127,7 +130,7 @@ export default function ExplorePage() {
                   </div>
                 </CardContent>
                 <CardFooter className="pt-2">
-                  <Button asChild className="w-full group/btn shadow-md hover:shadow-primary/20" disabled={isFull && !isFull}>
+                  <Button asChild className="w-full group/btn shadow-md hover:shadow-primary/20">
                     <Link href={`/explore/${circle.id}`} className="flex items-center justify-center">
                       Ver Plan Financiero
                       <ChevronRight className="ml-1 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
