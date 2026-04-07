@@ -9,11 +9,12 @@ service cloud.firestore {
     }
 
     // REGLAS PARA CONSULTAS DE GRUPO (Collection Group)
-    match /{path=**}/saving_circle_memberships/{membershipId} {
+    // Estas reglas DEBEN estar en la raíz para permitir consultas globales
+    match /{allPaths=**}/saving_circle_memberships/{membershipId} {
       allow read, write: if isSignedIn();
     }
 
-    match /{path=**}/bids/{bidId} {
+    match /{allPaths=**}/bids/{bidId} {
       allow read, write: if isSignedIn();
     }
 

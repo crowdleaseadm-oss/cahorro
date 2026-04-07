@@ -30,8 +30,8 @@ export interface UseCollectionResult<T> {
   https://github.com/firebase/firebase-js-sdk/blob/c5f08a9bc5da0d2b0207802c972d53724ccef055/packages/firestore/src/lite-api/reference.ts#L143
 */
 export interface InternalQuery extends Query<DocumentData> {
-  _query: {
-    path: {
+  _query?: {
+    path?: {
       canonicalString(): string;
       toString(): string;
     }
@@ -74,25 +74,30 @@ export function useCollection<T = any>(
         setError(null);
         setIsLoading(false);
       },
-      (error: FirestoreError) => {
+      async (serverError: FirestoreError) => {
         // Correctly handle collection group vs standard collection paths for errors
         let path = '';
         try {
-           path = memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as any)._query?.path?.canonicalString() || 'collectionGroup';
+           const internalQuery = memoizedTargetRefOrQuery as unknown as InternalQuery;
+           if (memoizedTargetRefOrQuery.type === 'collection') {
+             path = (memoizedTargetRefOrQuery as CollectionReference).path;
+           } else if (internalQuery._query?.path) {
+             path = internalQuery._query.path.canonicalString();
+           } else {
+             path = 'collectionGroupQuery';
+           }
         } catch (e) {
-          path = 'collectionGroup';
+          path = 'unknown_path';
         }
 
         const contextualError = new FirestorePermissionError({
           operation: 'list',
           path,
-        })
+        });
 
-        setError(contextualError)
-        setData(null)
-        setIsLoading(false)
+        setError(contextualError);
+        setData(null);
+        setIsLoading(false);
 
         errorEmitter.emit('permission-error', contextualError);
       }
