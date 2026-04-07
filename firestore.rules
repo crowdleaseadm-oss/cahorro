@@ -12,45 +12,40 @@ service cloud.firestore {
     }
 
     // --- REGLAS PARA COLLECTION GROUPS ---
-    // Indispensables para que las consultas 'collectionGroup' funcionen.
-    // Permiten buscar a través de todas las subcolecciones con estos nombres.
+    // Estas reglas son críticas para que las consultas 'collectionGroup' funcionen.
+    // Permiten buscar en todas las subcolecciones con estos nombres en toda la BD.
     
     match /{path=**}/saving_circle_memberships/{membershipId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     match /{path=**}/bids/{bidId} {
-      allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, write: if isSignedIn();
     }
 
     // --- REGLAS POR COLECCIÓN ESPECÍFICA ---
 
     // Usuarios y sus membresías privadas
     match /users/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
+      allow get, list: if isSignedIn();
       allow create, update: if isOwner(userId) || isSignedIn();
       allow delete: if isSignedIn();
 
       match /saving_circle_memberships/{membershipId} {
+        // Permitir acceso directo si se conoce la ruta
         allow read, write: if isSignedIn();
       }
     }
 
-    // Círculos de ahorro y sus licitaciones
+    // Círculos de ahorro
     match /saving_circles/{circleId} {
       // Los planes son públicos para fomentar la suscripción
       allow read: if true;
-      // Cualquier usuario autenticado puede crear o gestionar (estilo admin para prototipo)
-      allow create, update: if isSignedIn();
-      allow delete: if isSignedIn();
+      // Cualquier usuario autenticado puede gestionar en este prototipo
+      allow create, update, delete: if isSignedIn();
 
       match /bids/{bidId} {
-        allow read: if isSignedIn();
-        allow create: if isSignedIn();
-        allow update, delete: if isSignedIn();
+        allow read, write: if isSignedIn();
       }
     }
 
