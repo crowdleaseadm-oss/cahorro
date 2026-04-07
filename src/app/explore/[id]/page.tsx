@@ -61,7 +61,7 @@ export default function CirclePlanPage() {
   };
 
   if (circleLoading || (user && membershipCheckLoading)) return (
-    <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
+    <div className="h-[80vh] flex flex-col items-center justify-center gap-4">
       <Loader2 className="h-10 w-10 text-primary animate-spin" />
       <p className="text-muted-foreground">Cargando detalles del plan...</p>
     </div>
@@ -77,7 +77,7 @@ export default function CirclePlanPage() {
 
   if (isLocked) {
     return (
-      <div className="h-[60vh] flex flex-col items-center justify-center space-y-6 max-w-md mx-auto">
+      <div className="h-[80vh] flex flex-col items-center justify-center space-y-6 max-w-md mx-auto">
         <div className="p-6 bg-orange-100 rounded-full">
           <Lock className="h-12 w-12 text-orange-600" />
         </div>
@@ -201,7 +201,9 @@ export default function CirclePlanPage() {
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight text-primary">Detalle del Plan Financiero</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-primary">
+          {isAlreadyMember ? 'Tu Plan Financiero' : 'Detalle del Plan Financiero'}
+        </h1>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -262,7 +264,7 @@ export default function CirclePlanPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 font-bold text-primary text-lg">
                       <Calculator className="h-5 w-5" />
-                      Costo Financiero Total (CFT)
+                      {isAlreadyMember ? 'Resumen Financiero del Plan' : 'Costo Financiero Total (CFT)'}
                     </div>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
                       La 1ra cuota se abona al suscribirse. La 2da cuota vence el día 10 posterior a los 30 días de suscripción.
@@ -281,7 +283,9 @@ export default function CirclePlanPage() {
 
           <Card className="border-none shadow-sm bg-white overflow-hidden">
             <CardHeader>
-              <CardTitle className="text-xl font-bold">Proyección de {totalCuotas} Cuotas</CardTitle>
+              <CardTitle className="text-xl font-bold">
+                {isAlreadyMember ? 'Tu Plan de' : 'Proyección de'} {totalCuotas} Cuotas
+              </CardTitle>
               <CardDescription>Seguro de vida decreciente según saldo de capital puro.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -363,7 +367,7 @@ export default function CirclePlanPage() {
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-bold flex items-center gap-2">
                 {isAlreadyMember ? <CheckCircle className="h-6 w-6" /> : <ShieldCheck className="h-6 w-6" />}
-                {isAlreadyMember ? 'Ya eres miembro' : 'Suscripción en USD'}
+                {isAlreadyMember ? 'Membresía Activa' : 'Suscripción en USD'}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -400,7 +404,7 @@ export default function CirclePlanPage() {
               </Button>
               {isAlreadyMember && (
                 <p className="text-xs text-center font-medium animate-in fade-in slide-in-from-top-2">
-                  Puedes ver el estado de tu plan en "Mis Círculos"
+                  Puedes gestionar tu plan en la sección "Mis Círculos"
                 </p>
               )}
             </CardContent>
