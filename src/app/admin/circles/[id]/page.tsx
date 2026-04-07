@@ -1,72 +1,40 @@
+
 'use client';
 
+import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { doc, collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PiggyBank, DollarSign, Calendar, ArrowLeft } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PiggyBank, DollarSign, ArrowLeft, Gavel, UserCheck } from 'lucide-react';
 import Link from 'next/link';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-export default function CircleMembersPage() {
+export default function CircleAdminDetail() {
   const params = useParams();
   const db = useFirestore();
 
   const circleRef = useMemoFirebase(() => (db && params.id ? doc(db, 'saving_circles', params.id as string) : null), [db, params.id]);
   const { data: circle } = useDoc(circleRef);
 
-  // In a real multi-user scenario, memberships are nested under /users/{uid}/memberships.
-  // To list ALL members for a circle, we would ideally have a separate collection or a collection group query.
-  // For this MVP, we simulate listing by showing a filtered list if we had global access.
-  // We'll search for memberships globally (requires collectionGroup index in production, but here we'll assume a specific path for ease of demo).
-  
-  // NOTE: In the provided schema, memberships are in /users/{userId}/saving_circle_memberships/{id}.
-  // We can't easily list them all without collectionGroup. Let's assume we have a way to find them or use a mock for now.
-  // Actually, I will create a query that fetches members if they were accessible.
-  
-  // For the sake of this functional demo, I'll provide a way to "Register Payment" for a mock member 
-  // until collection groups are fully configured.
+  const bidsRef = useMemoFirebase(() => (db && params.id ? query(collection(db, 'saving_circles', params.id as string, 'bids'), orderBy('installmentsOffered', 'desc')) : null), [db, params.id]);
+  const { data: bids, isLoading: bidsLoading } = useCollection(bidsRef);
 
-  const handleRegisterPayment = (membership: any) => {
-    if (!db || !circle) return;
-
-    const alicuota = circle.targetCapital / circle.totalInstallments;
-    const subFee = alicuota * circle.subscriptionFeeRate;
-    const adminFee = alicuota * circle.administrativeFeeRate;
-    const insurance = circle.targetCapital * 0.0009;
-    const totalPaid = alicuota + subFee + adminFee + insurance;
-
-    const nextInstallmentNumber = (membership.paidInstallmentsCount || 0) + 1;
+  const handleAdjudicate = (bid: any) => {
+    if (!db) return;
     
-    // 1. Create Payment Record
-    const paymentData = {
-      savingCircleMembershipId: membership.id,
-      savingCircleAdminUserId: circle.adminUserId,
-      userId: membership.userId,
-      installmentNumber: nextInstallmentNumber,
-      paymentDate: new Date().toISOString(),
-      baseInstallmentAmountComponent: alicuota,
-      subscriptionFeeComponent: subFee,
-      administrativeFeeComponent: adminFee,
-      lifeInsuranceComponent: insurance,
-      totalPaidAmount: totalPaid,
-      status: 'Completed',
-      dueDate: new Date().toISOString(),
-      createdAt: serverTimestamp(),
-    };
+    // 1. Mark bid as Won
+    const bidDocRef = doc(db, 'saving_circles', params.id as string, 'bids', bid.id);
+    updateDocumentNonBlocking(bidDocRef, { status: 'Won' });
 
-    const paymentsCol = collection(db, 'users', membership.userId, 'saving_circle_memberships', membership.id, 'payments');
-    addDocumentNonBlocking(paymentsCol, paymentData);
-
-    // 2. Update Membership Balance
-    const membershipRef = doc(db, 'users', membership.userId, 'saving_circle_memberships', membership.id);
-    updateDocumentNonBlocking(membershipRef, {
-      paidInstallmentsCount: nextInstallmentNumber,
-      capitalPaid: (membership.capitalPaid || 0) + alicuota,
-      outstandingCapitalBalance: (membership.outstandingCapitalBalance || circle.targetCapital) - alicuota,
+    // 2. Update user membership
+    const membershipRef = doc(db, 'users', bid.userId, 'saving_circle_memberships', bid.membershipId);
+    updateDocumentNonBlocking(membershipRef, { 
+      adjudicationStatus: 'Adjudicated'
     });
   };
 
@@ -80,46 +48,114 @@ export default function CircleMembersPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">{circle.name}</h1>
-          <p className="text-muted-foreground">Gestión de miembros y pagos (USD)</p>
+          <p className="text-muted-foreground">Gestión Financiera (USD)</p>
         </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-4">
         <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-muted-foreground uppercase">Capital</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Capital</CardTitle></CardHeader>
           <CardContent><div className="text-2xl font-bold">${circle.targetCapital.toLocaleString()}</div></CardContent>
         </Card>
         <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-muted-foreground uppercase">Cuotas</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{circle.totalInstallments}</div></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Alícuota</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold text-primary">${circle.installmentValue.toFixed(2)}</div></CardContent>
         </Card>
         <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-muted-foreground uppercase">Alícuota</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-primary">${(circle.targetCapital / circle.totalInstallments).toFixed(2)}</div></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Sorteos/Mes</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{circle.drawMethodCount}</div></CardContent>
         </Card>
         <Card className="border-none shadow-sm">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-muted-foreground uppercase">Capacidad</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">{circle.memberCapacity}</div></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Licitaciones/Mes</CardTitle></CardHeader>
+          <CardContent><div className="text-2xl font-bold">{circle.bidMethodCount}</div></CardContent>
         </Card>
       </div>
 
-      <Card className="border-none shadow-sm">
-        <CardHeader>
-          <CardTitle>Miembros del Círculo</CardTitle>
-          <CardDescription>Registre pagos y supervise el saldo de cada suscriptor.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-muted/50 p-8 text-center rounded-xl">
-             <PiggyBank className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-30" />
-             <h3 className="text-lg font-bold">Visualización de Miembros</h3>
-             <p className="text-muted-foreground max-w-md mx-auto mb-6">
-               Para ver miembros reales, los suscriptores deben unirse desde la sección de "Explorar". 
-               Una vez unidos, aparecerán aquí para la gestión de sus pagos.
-             </p>
-             <Badge variant="secondary">Demo Funcional de Pagos lista</Badge>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="bids" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 max-w-md bg-white border border-border shadow-sm">
+          <TabsTrigger value="members">Miembros</TabsTrigger>
+          <TabsTrigger value="bids">Licitaciones</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="members" className="mt-6">
+          <Card className="border-none shadow-sm">
+            <CardHeader>
+              <CardTitle>Listado de Miembros</CardTitle>
+              <CardDescription>Supervisión de estados y pagos de suscripción.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-muted/30 p-12 text-center rounded-xl">
+                 <PiggyBank className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-30" />
+                 <h3 className="text-lg font-bold">Sin miembros registrados aún</h3>
+                 <p className="text-muted-foreground">Los usuarios deben unirse desde la sección "Explorar".</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="bids" className="mt-6">
+          <Card className="border-none shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gavel className="h-5 w-5 text-primary" />
+                Ofertas de Licitación
+              </CardTitle>
+              <CardDescription>Ranking de miembros que ofrecen adelantar cuotas.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {bidsLoading ? (
+                <div className="p-8 text-center">Cargando ofertas...</div>
+              ) : !bids || bids.length === 0 ? (
+                <div className="p-12 text-center bg-muted/20 rounded-xl">
+                  <p className="text-muted-foreground">No hay ofertas de licitación en este momento.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Miembro</TableHead>
+                      <TableHead>Cuotas Ofertadas</TableHead>
+                      <TableHead>Monto USD (Alícuota)</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="text-right">Acción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {bids.map((bid) => (
+                      <TableRow key={bid.id}>
+                        <TableCell className="font-bold">{bid.userName || "Socio Registrado"}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-primary border-primary/20">
+                            {bid.installmentsOffered} cuotas
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-bold">${bid.amountInUsd.toLocaleString()}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {new Date(bid.bidDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={bid.status === "Won" ? "default" : "secondary"}>
+                            {bid.status === "Won" ? "Adjudicado" : "Pendiente"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {bid.status === "Pending" && (
+                            <Button size="sm" onClick={() => handleAdjudicate(bid)} className="gap-2">
+                              <UserCheck className="h-4 w-4" />
+                              Adjudicar
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -5,46 +5,15 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "Represents a user account within the Círculo de Ahorro application. This entity stores basic profile information for each participant.",
+      "description": "Represents a user account within the Círculo de Ahorro application.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the User entity."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the user."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the user."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the user, used for communication and identification. (Format: email)",
-          "format": "email"
-        },
-        "phoneNumber": {
-          "type": "string",
-          "description": "The phone number of the user. (Optional)"
-        },
-        "address": {
-          "type": "string",
-          "description": "The physical address of the user. (Optional)"
-        },
-        "registrationDate": {
-          "type": "string",
-          "description": "The date and time when the user registered in the application. (Format: date-time)",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "registrationDate": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "firstName",
-        "lastName",
-        "email",
-        "registrationDate"
-      ]
+      "required": ["id", "firstName", "lastName", "email", "registrationDate"]
     },
     "SavingCircle": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -52,178 +21,79 @@
       "type": "object",
       "description": "Represents a collective saving circle (Círculo de Ahorro) with specific financial parameters in USD.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the SavingCircle entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the saving circle."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the saving circle."
-        },
-        "adminUserId": {
-          "type": "string",
-          "description": "Reference to the Admin User."
-        },
-        "targetCapital": {
-          "type": "number",
-          "description": "Capital suscripto (multiplo de 5000 USD)."
-        },
-        "totalInstallments": {
-          "type": "number",
-          "description": "Cantidad de cuotas (multiplo de 12)."
-        },
-        "installmentValue": {
-          "type": "number",
-          "description": "Alicuota (capital / cuotas)."
-        },
-        "subscriptionFeeRate": {
-          "type": "number",
-          "description": "Derecho de suscripción (0.01-0.10)."
-        },
-        "administrativeFeeRate": {
-          "type": "number",
-          "description": "Gasto administrativo (0.01-0.10)."
-        },
-        "lifeInsuranceRate": {
-          "type": "number",
-          "description": "Seguro de vida (fijo 0.0009)."
-        },
-        "drawMethodCount": {
-          "type": "number",
-          "description": "Adjudicaciones por sorteo por ronda (1-5)."
-        },
-        "bidMethodCount": {
-          "type": "number",
-          "description": "Adjudicaciones por licitación por ronda (1-5)."
-        },
-        "memberCapacity": {
-          "type": "number",
-          "description": "Total miembros = cuotas * (sorteo + licitacion)."
-        },
-        "status": {
-          "type": "string",
-          "enum": ["Pending", "Active", "Completed", "Cancelled"]
-        },
-        "creationDate": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "adminUserId": { "type": "string" },
+        "targetCapital": { "type": "number", "description": "Capital suscripto (multiplo de 5000 USD)." },
+        "totalInstallments": { "type": "number" },
+        "installmentValue": { "type": "number", "description": "Alicuota pura." },
+        "subscriptionFeeRate": { "type": "number" },
+        "administrativeFeeRate": { "type": "number" },
+        "lifeInsuranceRate": { "type": "number", "default": 0.0009 },
+        "drawMethodCount": { "type": "number", "description": "1-5 adjudicaciones por sorteo." },
+        "bidMethodCount": { "type": "number", "description": "1-5 adjudicaciones por licitacion." },
+        "memberCapacity": { "type": "number" },
+        "status": { "type": "string", "enum": ["Active", "Completed", "Cancelled"] },
+        "creationDate": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "name",
-        "adminUserId",
-        "targetCapital",
-        "totalInstallments",
-        "installmentValue",
-        "subscriptionFeeRate",
-        "administrativeFeeRate",
-        "lifeInsuranceRate",
-        "drawMethodCount",
-        "bidMethodCount",
-        "memberCapacity",
-        "status",
-        "creationDate"
-      ]
+      "required": ["id", "name", "adminUserId", "targetCapital", "totalInstallments", "installmentValue", "subscriptionFeeRate", "administrativeFeeRate", "lifeInsuranceRate", "drawMethodCount", "bidMethodCount", "memberCapacity", "status", "creationDate"]
     },
     "SavingCircleMembership": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SavingCircleMembership",
       "type": "object",
-      "description": "User's individual subscription and progress.",
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
         "savingCircleId": { "type": "string" },
+        "savingCircleName": { "type": "string" },
         "joiningDate": { "type": "string", "format": "date-time" },
         "status": { "type": "string" },
         "paidInstallmentsCount": { "type": "number" },
         "capitalPaid": { "type": "number" },
-        "outstandingCapitalBalance": { "type": "number", "description": "Saldo de capital: Capital Suscripto - alicuotas pagas." },
-        "adjudicationStatus": { "type": "string" }
+        "outstandingCapitalBalance": { "type": "number" },
+        "adjudicationStatus": { "type": "string", "enum": ["Pending", "Adjudicated", "Completed"] }
       },
-      "required": [
-        "id",
-        "userId",
-        "savingCircleId",
-        "joiningDate",
-        "status",
-        "paidInstallmentsCount",
-        "capitalPaid",
-        "outstandingCapitalBalance",
-        "adjudicationStatus"
-      ]
+      "required": ["id", "userId", "savingCircleId", "joiningDate", "status", "paidInstallmentsCount", "capitalPaid", "outstandingCapitalBalance", "adjudicationStatus"]
     },
-    "Payment": {
+    "AdjudicationBid": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Payment",
+      "title": "AdjudicationBid",
       "type": "object",
-      "description": "Detailed payment record including all fees.",
+      "description": "User offer to prepay installments to get adjudicated.",
       "properties": {
         "id": { "type": "string" },
-        "savingCircleMembershipId": { "type": "string" },
-        "installmentNumber": { "type": "number" },
-        "paymentDate": { "type": "string", "format": "date-time" },
-        "baseInstallmentAmountComponent": { "type": "number", "description": "Alicuota pura." },
-        "subscriptionFeeComponent": { "type": "number" },
-        "administrativeFeeComponent": { "type": "number" },
-        "lifeInsuranceComponent": { "type": "number" },
-        "latePaymentInterestAmount": { "type": "number" },
-        "totalPaidAmount": { "type": "number", "description": "Cuota total pagada." },
-        "status": { "type": "string" },
-        "dueDate": { "type": "string", "format": "date-time" }
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "savingCircleId": { "type": "string" },
+        "membershipId": { "type": "string" },
+        "installmentsOffered": { "type": "number" },
+        "amountInUsd": { "type": "number" },
+        "bidDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Pending", "Won", "Lost"] }
       },
-      "required": [
-        "id",
-        "savingCircleMembershipId",
-        "installmentNumber",
-        "paymentDate",
-        "baseInstallmentAmountComponent",
-        "subscriptionFeeComponent",
-        "administrativeFeeComponent",
-        "lifeInsuranceComponent",
-        "totalPaidAmount",
-        "status",
-        "dueDate"
-      ]
+      "required": ["id", "userId", "savingCircleId", "membershipId", "installmentsOffered", "amountInUsd", "bidDate", "status"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": { "$ref": "#/backend/entities/User" },
-          "description": "User profiles."
-        }
-      },
-      {
-        "path": "/saving_circles/{savingCircleId}",
-        "definition": {
-          "entityName": "SavingCircle",
-          "schema": { "$ref": "#/backend/entities/SavingCircle" },
-          "description": "Saving circles configuration in USD."
-        }
-      },
-      {
-        "path": "/users/{userId}/saving_circle_memberships/{membershipId}",
-        "definition": {
-          "entityName": "SavingCircleMembership",
-          "schema": { "$ref": "#/backend/entities/SavingCircleMembership" },
-          "description": "User memberships and capital balance tracking."
-        }
-      }
-    ]
+    "/users/{userId}": {
+      "schema": { "$ref": "#/backend/entities/User" },
+      "description": "User profiles."
+    },
+    "/saving_circles/{savingCircleId}": {
+      "schema": { "$ref": "#/backend/entities/SavingCircle" },
+      "description": "Saving circles configuration."
+    },
+    "/saving_circles/{savingCircleId}/bids/{bidId}": {
+      "schema": { "$ref": "#/backend/entities/AdjudicationBid" },
+      "description": "Bids placed for a specific circle."
+    },
+    "/users/{userId}/saving_circle_memberships/{membershipId}": {
+      "schema": { "$ref": "#/backend/entities/SavingCircleMembership" },
+      "description": "User memberships."
+    }
   }
 }
