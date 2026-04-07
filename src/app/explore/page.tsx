@@ -135,7 +135,7 @@ export default function ExplorePage() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
                       <span className="text-muted-foreground flex items-center gap-1">
-                        <Users className="h-3 w-3" /> Ocupación
+                        <Users className="h-3 w-3" /> Miembros
                       </span>
                       <span className={isFull ? "text-orange-600" : "text-primary"}>
                         {circle.currentMemberCount || 0} / {circle.memberCapacity}
