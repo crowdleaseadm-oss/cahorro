@@ -48,18 +48,21 @@ export default function CirclePlanPage() {
 
   // Cálculos financieros base
   const alicuota = circle.targetCapital / circle.totalInstallments;
-  const subFeeRate = circle.subscriptionFeeRate || 0.03;
   const adminFeeRate = circle.administrativeFeeRate || 0.02;
   const insuranceRate = 0.0009;
 
-  // Totales
-  const subFeeTotal = alicuota * subFeeRate;
+  // Lógica de Derecho de Suscripción (3% prorrateado en el primer 20% de cuotas)
+  const totalSubFee = circle.targetCapital * 0.03;
+  const installmentsWithSubFee = Math.ceil(circle.totalInstallments * 0.20);
+  const proratedSubFee = totalSubFee / installmentsWithSubFee;
+
+  // Gastos fijos mensuales
   const adminFeeTotal = alicuota * adminFeeRate;
   const insuranceTotal = circle.targetCapital * insuranceRate;
-  const totalMonthly = alicuota + adminFeeTotal + insuranceTotal;
+  const baseMonthly = alicuota + adminFeeTotal + insuranceTotal;
   
   // CFT Proyectado
-  const totalPaidEstimate = (totalMonthly * circle.totalInstallments) + subFeeTotal;
+  const totalPaidEstimate = (baseMonthly * circle.totalInstallments) + totalSubFee;
   const cftAverage = ((totalPaidEstimate - circle.targetCapital) / circle.targetCapital) * 100;
 
   const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
@@ -109,12 +112,12 @@ export default function CirclePlanPage() {
     return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // Generar datos de las 84 cuotas
+  // Generar datos de las cuotas con prorrateo
   const installments = Array.from({ length: circle.totalInstallments }, (_, i) => {
     const num = i + 1;
-    // En el sistema de círculos, la cuota 1 suele incluir el derecho de suscripción
-    const currentSubFee = num === 1 ? subFeeTotal : 0;
-    const currentTotal = totalMonthly + currentSubFee;
+    // Aplicar prorrateo solo si está dentro del primer 20%
+    const currentSubFee = num <= installmentsWithSubFee ? proratedSubFee : 0;
+    const currentTotal = baseMonthly + currentSubFee;
     return { num, currentSubFee, currentTotal };
   });
 
@@ -164,7 +167,7 @@ export default function CirclePlanPage() {
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Cuota Promedio</span>
                   <div className="flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-primary" />
-                    <span className="text-xl font-bold">{formatCurrency(totalMonthly)}</span>
+                    <span className="text-xl font-bold">{formatCurrency(totalPaidEstimate / circle.totalInstallments)}</span>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -184,7 +187,7 @@ export default function CirclePlanPage() {
                       Costo Financiero Total (CFT)
                     </div>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      Representa el costo total sobre el capital por gastos administrativos y seguros.
+                      El Derecho de Suscripción (3%) se prorratea en las primeras {installmentsWithSubFee} cuotas del plan.
                     </p>
                   </div>
                   <div className="text-center md:text-right">
@@ -199,7 +202,7 @@ export default function CirclePlanPage() {
           <Card className="border-none shadow-sm bg-white overflow-hidden">
             <CardHeader>
               <CardTitle className="text-xl font-bold">Proyección de {circle.totalInstallments} Cuotas</CardTitle>
-              <CardDescription>Planificación detallada de aportes mensuales.</CardDescription>
+              <CardDescription>Planificación detallada de aportes mensuales en USD.</CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[500px] w-full pr-4">
@@ -229,7 +232,7 @@ export default function CirclePlanPage() {
                             <DialogContent className="max-w-md">
                               <DialogHeader>
                                 <DialogTitle className="text-primary">Desglose de Cuota #{inst.num}</DialogTitle>
-                                <DialogDescription>Composición detallada del aporte mensual en USD.</DialogDescription>
+                                <DialogDescription>Composición detallada del aporte mensual.</DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4 py-4">
                                 <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
@@ -246,7 +249,10 @@ export default function CirclePlanPage() {
                                 </div>
                                 {inst.currentSubFee > 0 && (
                                   <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/20">
-                                    <span className="text-sm font-bold text-primary">Derecho de Suscripción</span>
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-bold text-primary">Derecho de Suscripción</span>
+                                      <span className="text-[10px] text-primary/70">Prorrateo cuota {inst.num} de {installmentsWithSubFee}</span>
+                                    </div>
                                     <span className="font-bold text-primary">{formatCurrency(inst.currentSubFee)}</span>
                                   </div>
                                 )}
@@ -279,8 +285,8 @@ export default function CirclePlanPage() {
             <CardContent className="space-y-6">
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-sm p-3 rounded-xl bg-white/10">
-                  <span className="font-medium">Cuota Mensual</span>
-                  <span className="font-bold text-lg">{formatCurrency(totalMonthly)}</span>
+                  <span className="font-medium">Cuota Promedio</span>
+                  <span className="font-bold text-lg">{formatCurrency(totalPaidEstimate / circle.totalInstallments)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm p-3 rounded-xl bg-white/10">
                   <span className="font-medium">Capital Final</span>
@@ -289,20 +295,11 @@ export default function CirclePlanPage() {
               </div>
 
               <div className="space-y-4">
-                 <h4 className="text-xs font-bold uppercase tracking-widest opacity-70">Garantías Incluidas:</h4>
-                 <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Seguro de Vida (Respaldo Capital)
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Auditoría Mensual Externa
-                    </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Valor de Cuota Protegido en USD
-                    </div>
+                 <h4 className="text-xs font-bold uppercase tracking-widest opacity-70">Condición Derecho Suscripción:</h4>
+                 <div className="bg-white/10 p-3 rounded-xl">
+                    <p className="text-xs leading-relaxed">
+                      El 3% del capital total ({formatCurrency(totalSubFee)}) se divide en las primeras {installmentsWithSubFee} cuotas ({formatCurrency(proratedSubFee)} adicionales c/u).
+                    </p>
                  </div>
               </div>
 
