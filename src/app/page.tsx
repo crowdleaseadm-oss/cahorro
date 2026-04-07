@@ -2,21 +2,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PiggyBank, Users, Calendar, Award, PartyPopper, Loader2, ArrowRight, Clock } from "lucide-react"
+import { PiggyBank, Users, Calendar, Award, PartyPopper, Loader2, ArrowRight, Clock, Info } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import Link from "next/link"
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where, documentId } from 'firebase/firestore';
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const [mounted, setMounted] = useState(false);
   const [nextDueDate, setNextDueDate] = useState<string>('');
+  const [isAnyCircleActive, setIsAnyCircleActive] = useState(false);
 
   // 1. Fetch User Memberships
   const membershipsRef = useMemoFirebase(() => 
@@ -25,54 +27,63 @@ export default function Dashboard() {
   );
   const { data: memberships, isLoading: membershipsLoading } = useCollection(membershipsRef);
 
+  // 2. Fetch Circle Statuses to determine if they are active
+  const circleIds = memberships?.map(m => m.savingCircleId) || [];
+  const circlesQuery = useMemoFirebase(() => {
+    if (!db || circleIds.length === 0) return null;
+    return query(collection(db, 'saving_circles'), where(documentId(), 'in', circleIds));
+  }, [db, circleIds.join(',')]);
+  const { data: circles, isLoading: circlesLoading } = useCollection(circlesQuery);
+
   const adjudicatedMemberships = (memberships || []).filter(m => m.adjudicationStatus === 'Adjudicated');
 
   const calculateNextInstallmentDate = (joiningDateStr: string) => {
     const joinDate = new Date(joiningDateStr);
-    // Regla: 1ra se paga al unirse. La 2da debe ser al menos 30 días después y caer un día 10.
     const minDateForSecond = new Date(joinDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-    
     let next10th = new Date(joinDate.getFullYear(), joinDate.getMonth(), 10);
-    
-    // Buscar el primer día 10 que sea posterior o igual a minDateForSecond
     while (next10th < minDateForSecond) {
       next10th.setMonth(next10th.getMonth() + 1);
     }
-    
     return next10th;
   };
 
   useEffect(() => {
     setMounted(true);
     
-    if (memberships && memberships.length > 0) {
-      const nextDates = memberships.map(m => calculateNextInstallmentDate(m.joiningDate));
-      const futureDates = nextDates.filter(d => d >= new Date());
+    if (memberships && memberships.length > 0 && circles) {
+      const activeCircleIds = circles
+        .filter(c => (c.currentMemberCount || 0) >= c.memberCapacity)
+        .map(c => c.id);
+
+      const activeMemberships = memberships.filter(m => activeCircleIds.includes(m.savingCircleId));
       
-      if (futureDates.length > 0) {
-        const earliest = new Date(Math.min(...futureDates.map(d => d.getTime())));
-        setNextDueDate(earliest.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }));
+      if (activeMemberships.length > 0) {
+        setIsAnyCircleActive(true);
+        const nextDates = activeMemberships.map(m => calculateNextInstallmentDate(m.joiningDate));
+        const futureDates = nextDates.filter(d => d >= new Date());
+        
+        if (futureDates.length > 0) {
+          const earliest = new Date(Math.min(...futureDates.map(d => d.getTime())));
+          setNextDueDate(earliest.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }));
+        } else {
+          setNextDueDate('Día 10 del próximo mes');
+        }
       } else {
-        // Fallback genérico si no hay fechas futuras calculadas
-        const now = new Date();
-        const fallback = new Date(now.getFullYear(), now.getMonth() + 1, 10);
-        setNextDueDate(fallback.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }));
+        setIsAnyCircleActive(false);
+        setNextDueDate('Pendiente de inicio de grupo');
       }
     } else {
-      // Cálculo genérico para usuarios sin membresías aún
-      const now = new Date();
-      let genericNext = new Date(now.getFullYear(), now.getMonth(), 10);
-      if (genericNext < now) genericNext.setMonth(genericNext.getMonth() + 1);
-      setNextDueDate(genericNext.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }));
+      setIsAnyCircleActive(false);
+      setNextDueDate('Sin planes activos');
     }
-  }, [memberships]);
+  }, [memberships, circles]);
 
   const formatCurrency = (val: number) => {
     if (!mounted) return `$0.00`;
     return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  if (isUserLoading || membershipsLoading) {
+  if (isUserLoading || membershipsLoading || (circleIds.length > 0 && circlesLoading)) {
     return (
       <div className="h-[80vh] flex flex-col items-center justify-center gap-4">
         <Loader2 className="h-10 w-10 text-primary animate-spin" />
@@ -119,24 +130,26 @@ export default function Dashboard() {
       )}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-none shadow-sm bg-primary text-primary-foreground">
+        <Card className={`border-none shadow-sm ${isAnyCircleActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80">Próximo Vencimiento</CardTitle>
             <Clock className="h-4 w-4 opacity-80" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{nextDueDate || 'Día 10 de cada mes'}</div>
-            <p className="text-xs opacity-70 mt-1">Cobro administrativo automático</p>
+            <div className="text-xl font-bold">{nextDueDate}</div>
+            <p className="text-xs opacity-70 mt-1">
+              {isAnyCircleActive ? 'Cobro administrativo automático' : 'A la espera de conformación de grupo'}
+            </p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Círculos Activos</CardTitle>
+            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Planes Suscriptos</CardTitle>
             <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-foreground">{memberships?.length || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Planes vigentes en USD</p>
+            <p className="text-xs text-muted-foreground mt-1">Suscripciones en USD</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-secondary">
@@ -146,7 +159,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-secondary-foreground">{adjudicatedMemberships.length}</div>
-            <p className="text-xs text-secondary-foreground/70 mt-1">Planes listos para entrega</p>
+            <p className="text-xs text-secondary-foreground/70 mt-1">Listos para adjudicar</p>
           </CardContent>
         </Card>
       </div>
@@ -155,7 +168,7 @@ export default function Dashboard() {
         <Card className="md:col-span-4 border-none shadow-sm bg-white">
           <CardHeader>
             <CardTitle className="text-lg">Tus Planes de Ahorro</CardTitle>
-            <CardDescription>Seguimiento de fechas de pago y adjudicación.</CardDescription>
+            <CardDescription>Seguimiento de fechas de pago y estado de grupo.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {!memberships || memberships.length === 0 ? (
@@ -165,34 +178,49 @@ export default function Dashboard() {
               </div>
             ) : (
               memberships.map((membership) => {
+                const circle = circles?.find(c => c.id === membership.savingCircleId);
+                const isCircleActive = circle && (circle.currentMemberCount || 0) >= circle.memberCapacity;
                 const totalCapital = membership.capitalPaid + membership.outstandingCapitalBalance;
                 const progress = totalCapital > 0 ? (membership.capitalPaid / totalCapital) * 100 : 0;
-                const nextPayDate = calculateNextInstallmentDate(membership.joiningDate);
+                const nextPayDate = isCircleActive ? calculateNextInstallmentDate(membership.joiningDate) : null;
                 
                 return (
                   <div key={membership.id} className="group p-5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
                     <div className="flex items-center justify-between mb-4">
-                      <div>
+                      <div className="flex flex-col">
                         <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{membership.savingCircleName}</h4>
-                        <span className="text-xs text-muted-foreground">Capital Suscripto: {formatCurrency(totalCapital)} USD</span>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant={isCircleActive ? "default" : "secondary"} className={`text-[10px] h-5 ${isCircleActive ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'} border-none`}>
+                            {isCircleActive ? 'GRUPO ACTIVO' : 'GRUPO EN FORMACIÓN'}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground">Capital: {formatCurrency(totalCapital)}</span>
+                        </div>
                       </div>
-                      <Badge variant={membership.adjudicationStatus === 'Adjudicated' ? "default" : "secondary"} className={membership.adjudicationStatus === 'Adjudicated' ? "bg-green-100 text-green-700 border-none" : ""}>
+                      <Badge variant={membership.adjudicationStatus === 'Adjudicated' ? "default" : "outline"} className={membership.adjudicationStatus === 'Adjudicated' ? "bg-green-100 text-green-700 border-none" : ""}>
                         {membership.adjudicationStatus === 'Adjudicated' ? 'Adjudicado' : 'Pendiente'}
                       </Badge>
                     </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs">
-                        <span className="font-medium">Integración de Capital</span>
-                        <span className="text-primary font-bold">{progress.toFixed(1)}%</span>
-                      </div>
-                      <Progress value={progress} className="h-2" />
-                    </div>
+                    
                     <div className="mt-5 flex items-center justify-between gap-4">
                       <div className="grid grid-cols-2 gap-6">
                         <div className="flex flex-col">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Próximo Vencimiento</span>
-                          <span className="text-sm font-bold text-foreground">
-                            {nextPayDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center gap-1">
+                            Vencimiento
+                            {!isCircleActive && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger>
+                                    <Info className="h-3 w-3" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p className="text-xs">El vencimiento se activará cuando el grupo esté completo.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </span>
+                          <span className={`text-sm font-bold ${isCircleActive ? 'text-foreground' : 'text-muted-foreground'}`}>
+                            {nextPayDate ? nextPayDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'TBD'}
                           </span>
                         </div>
                         <div className="flex flex-col">

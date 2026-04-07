@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PiggyBank, ArrowRight, Target, Calendar, DollarSign, Activity, Gavel, Loader2 } from "lucide-react"
+import { PiggyBank, ArrowRight, Target, Calendar, DollarSign, Activity, Gavel, Loader2, Info, Clock } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -9,9 +10,10 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import Link from "next/link"
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, serverTimestamp, query, where, documentId } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function MyCirclesPage() {
@@ -27,11 +29,28 @@ export default function MyCirclesPage() {
   }, []);
 
   const membershipsRef = useMemoFirebase(() => (db && user ? collection(db, 'users', user.uid, 'saving_circle_memberships') : null), [db, user]);
-  const { data: memberships, isLoading } = useCollection(membershipsRef);
+  const { data: memberships, isLoading: membershipsLoading } = useCollection(membershipsRef);
+
+  const circleIds = memberships?.map(m => m.savingCircleId) || [];
+  const circlesQuery = useMemoFirebase(() => {
+    if (!db || circleIds.length === 0) return null;
+    return query(collection(db, 'saving_circles'), where(documentId(), 'in', circleIds));
+  }, [db, circleIds.join(',')]);
+  const { data: circles, isLoading: circlesLoading } = useCollection(circlesQuery);
 
   const formatNumber = (num: number) => {
     if (!mounted) return num.toString();
     return num.toLocaleString();
+  };
+
+  const calculateNextInstallmentDate = (joiningDateStr: string) => {
+    const joinDate = new Date(joiningDateStr);
+    const minDateForSecond = new Date(joinDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+    let next10th = new Date(joinDate.getFullYear(), joinDate.getMonth(), 10);
+    while (next10th < minDateForSecond) {
+      next10th.setMonth(next10th.getMonth() + 1);
+    }
+    return next10th;
   };
 
   const handlePlaceBid = () => {
@@ -59,10 +78,12 @@ export default function MyCirclesPage() {
     }, 800);
   };
 
-  if (isLoading) return <div className="p-10 text-center flex flex-col items-center gap-4">
-    <Loader2 className="h-10 w-10 text-primary animate-spin" />
-    <p>Cargando tus suscripciones...</p>
-  </div>;
+  if (membershipsLoading || (circleIds.length > 0 && circlesLoading)) return (
+    <div className="p-10 text-center flex flex-col items-center gap-4">
+      <Loader2 className="h-10 w-10 text-primary animate-spin" />
+      <p>Cargando tus suscripciones...</p>
+    </div>
+  );
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -72,7 +93,7 @@ export default function MyCirclesPage() {
             <PiggyBank className="h-8 w-8 text-primary" />
             Mis Círculos
           </h1>
-          <p className="text-muted-foreground mt-1">Saldos de capital y adjudicaciones en USD.</p>
+          <p className="text-muted-foreground mt-1">Gestión de tus suscripciones y adjudicaciones en USD.</p>
         </div>
       </div>
 
@@ -88,41 +109,59 @@ export default function MyCirclesPage() {
       ) : (
         <div className="grid gap-8">
           {memberships.map((membership) => {
-            const progress = (membership.paidInstallmentsCount / (membership.paidInstallmentsCount + (membership.outstandingCapitalBalance / (membership.capitalPaid / (membership.paidInstallmentsCount || 1) || 1)))) * 100 || 0;
+            const circle = circles?.find(c => c.id === membership.savingCircleId);
+            const isCircleActive = circle && (circle.currentMemberCount || 0) >= circle.memberCapacity;
+            const nextPayDate = isCircleActive ? calculateNextInstallmentDate(membership.joiningDate) : null;
+            const progress = circle ? ((circle.currentMemberCount || 0) / circle.memberCapacity) * 100 : 0;
+
             return (
               <Card key={membership.id} className="border-none shadow-md overflow-hidden bg-white rounded-3xl">
                 <div className="grid md:grid-cols-12">
                   <div className="md:col-span-4 bg-accent/30 p-8 flex flex-col justify-between border-r border-border">
                     <div className="space-y-6">
-                      <Badge className="bg-primary text-white border-none px-3 py-1 text-xs font-bold">{membership.status}</Badge>
+                      <Badge className={`${isCircleActive ? 'bg-green-600' : 'bg-orange-500'} text-white border-none px-3 py-1 text-xs font-bold uppercase tracking-widest`}>
+                        {isCircleActive ? 'Grupo Activo' : 'En Formación'}
+                      </Badge>
                       <div>
                         <h2 className="text-2xl font-bold text-foreground leading-tight">{membership.savingCircleName}</h2>
                         <p className="text-xs text-muted-foreground mt-1 font-mono uppercase tracking-tighter">ID: {membership.id}</p>
                       </div>
                     </div>
-                    <div className="mt-12 space-y-3">
-                      <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                        <span>Progreso de Capital</span>
-                        <span className="text-primary">{progress.toFixed(1)}%</span>
+                    {!isCircleActive && (
+                      <div className="mt-12 space-y-3">
+                        <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                          <span>Completitud del Grupo</span>
+                          <span className="text-primary">{progress.toFixed(0)}%</span>
+                        </div>
+                        <Progress value={progress} className="h-2.5 bg-white" />
                       </div>
-                      <Progress value={progress} className="h-2.5 bg-white" />
-                    </div>
+                    )}
                   </div>
 
                   <div className="md:col-span-8 p-8 flex flex-col justify-between">
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-8 mb-10">
                       <div className="space-y-1.5">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Capital Integrado</span>
-                        <div className="flex items-center gap-2 font-bold text-xl">
-                          <Target className="h-5 w-5 text-primary" />
-                          ${formatNumber(membership.capitalPaid)}
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                          Próximo Pago
+                          {!isCircleActive && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
+                                <TooltipContent><p className="text-xs">Inicia al completarse el grupo.</p></TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </span>
+                        <div className={`flex items-center gap-2 font-bold text-xl ${isCircleActive ? 'text-primary' : 'text-muted-foreground'}`}>
+                          <Clock className="h-5 w-5" />
+                          {nextPayDate ? nextPayDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'Pendiente'}
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saldo Pendiente</span>
-                        <div className="flex items-center gap-2 font-bold text-xl text-primary">
-                          <DollarSign className="h-5 w-5" />
-                          ${formatNumber(membership.outstandingCapitalBalance)}
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Cuotas Pagas</span>
+                        <div className="flex items-center gap-2 font-bold text-xl">
+                          <Target className="h-5 w-5 text-primary" />
+                          {membership.paidInstallmentsCount} Meses
                         </div>
                       </div>
                       <div className="space-y-1.5">
@@ -136,51 +175,52 @@ export default function MyCirclesPage() {
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-border/60">
-                      <div className="flex items-center gap-4">
-                         <div className="flex flex-col">
-                           <span className="text-[10px] font-bold text-muted-foreground uppercase">Cuotas Pagas</span>
-                           <span className="font-bold text-lg">{membership.paidInstallmentsCount} meses</span>
-                         </div>
-                      </div>
+                      <p className="text-xs text-muted-foreground max-w-sm">
+                        {isCircleActive 
+                          ? "El círculo está en curso. Puedes participar en los sorteos y licitaciones mensuales."
+                          : "El círculo se activará automáticamente cuando se completen todas las vacantes."}
+                      </p>
                       <div className="flex gap-3 w-full sm:w-auto">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" className="flex-1 sm:flex-none border-primary/20 text-primary gap-2 hover:bg-primary/5 rounded-xl" onClick={() => setSelectedMembership(membership)}>
-                              <Gavel className="h-4 w-4" />
-                              Licitación
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Oferta de Licitación</DialogTitle>
-                              <DialogDescription>
-                                Ofrece adelantar cuotas para obtener el capital antes. El monto es Alícuota Pura x Cuotas.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="py-6 space-y-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="installments">Cantidad de Cuotas a Adelantar</Label>
-                                <Input 
-                                  id="installments" 
-                                  type="number" 
-                                  min="1" 
-                                  value={bidAmount} 
-                                  onChange={(e) => setBidAmount(Number(e.target.value))} 
-                                  className="text-lg font-bold"
-                                />
-                              </div>
-                              <div className="bg-accent/30 p-4 rounded-xl flex justify-between items-center">
-                                <span className="text-sm font-medium text-muted-foreground">Monto Total Oferta (USD):</span>
-                                <span className="text-xl font-bold text-primary">${formatNumber(bidAmount * 2083.33)}</span>
-                              </div>
-                            </div>
-                            <DialogFooter>
-                              <Button onClick={handlePlaceBid} disabled={isBidding} className="w-full sm:w-auto rounded-xl">
-                                {isBidding ? 'Enviando...' : 'Confirmar Oferta'}
+                        {isCircleActive && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" className="flex-1 sm:flex-none border-primary/20 text-primary gap-2 hover:bg-primary/5 rounded-xl" onClick={() => setSelectedMembership(membership)}>
+                                <Gavel className="h-4 w-4" />
+                                Licitación
                               </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Oferta de Licitación</DialogTitle>
+                                <DialogDescription>
+                                  Ofrece adelantar cuotas para obtener el capital antes. El monto es Alícuota Pura x Cuotas.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="py-6 space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="installments">Cantidad de Cuotas a Adelantar</Label>
+                                  <Input 
+                                    id="installments" 
+                                    type="number" 
+                                    min="1" 
+                                    value={bidAmount} 
+                                    onChange={(e) => setBidAmount(Number(e.target.value))} 
+                                    className="text-lg font-bold"
+                                  />
+                                </div>
+                                <div className="bg-accent/30 p-4 rounded-xl flex justify-between items-center">
+                                  <span className="text-sm font-medium text-muted-foreground">Monto Total Oferta (USD):</span>
+                                  <span className="text-xl font-bold text-primary">${formatNumber(bidAmount * 2083.33)}</span>
+                                </div>
+                              </div>
+                              <DialogFooter>
+                                <Button onClick={handlePlaceBid} disabled={isBidding} className="w-full sm:w-auto rounded-xl">
+                                  {isBidding ? 'Enviando...' : 'Confirmar Oferta'}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        )}
                         
                         <Button asChild className="flex-1 sm:flex-none gap-2 rounded-xl shadow-lg shadow-primary/20">
                           <Link href={`/explore/${membership.savingCircleId}`}>
