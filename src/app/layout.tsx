@@ -3,6 +3,7 @@ import './globals.css';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/dashboard/app-sidebar';
 import { FirebaseClientProvider } from '@/firebase';
+import { WhatsAppFloat } from '@/components/whatsapp-float';
 
 export const metadata: Metadata = {
   title: 'Círculo de Ahorro | Tu comunidad financiera',
@@ -24,13 +25,14 @@ export default function RootLayout({
       <body className="font-body antialiased bg-background overflow-x-hidden">
         <FirebaseClientProvider>
           <SidebarProvider>
-            <div className="flex min-h-screen w-full">
+            <div className="flex min-h-screen w-full relative">
               <AppSidebar />
               <SidebarInset className="flex-1 bg-background">
                 <main className="w-full h-full p-6 md:p-8 lg:p-10 transition-all duration-300">
                   {children}
                 </main>
               </SidebarInset>
+              <WhatsAppFloat />
             </div>
           </SidebarProvider>
         </FirebaseClientProvider>

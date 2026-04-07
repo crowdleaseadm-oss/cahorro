@@ -11,7 +11,6 @@ import {
   LogOut,
   ChevronRight,
   TrendingUp,
-  MessageCircle,
 } from "lucide-react"
 
 import {
@@ -109,18 +108,6 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 mt-auto space-y-4">
-        <div className="rounded-2xl bg-green-50 p-4 border border-green-100">
-          <div className="flex items-center gap-2 mb-3">
-             <MessageCircle className="h-4 w-4 text-green-600" />
-             <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider">Ayuda Directa</span>
-          </div>
-          <Button asChild className="w-full bg-green-600 hover:bg-green-700 text-white shadow-sm h-9 text-xs font-bold gap-2">
-            <a href="https://wa.me/542235194889" target="_blank" rel="noopener noreferrer">
-              WhatsApp Soporte
-            </a>
-          </Button>
-        </div>
-
         <div className="rounded-2xl bg-accent/50 p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
