@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { ShieldCheck, Users, PiggyBank, MoreHorizontal, Plus, Search, DollarSign, Calculator, Settings2, Eye, EyeOff, Lock } from "lucide-react"
+import { ShieldCheck, Users, PiggyBank, MoreHorizontal, Plus, Search, DollarSign, Calculator, Settings2, Eye, EyeOff, Lock, Trash2, AlertTriangle } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -10,12 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useFirestore, useCollection, useMemoFirebase, useUser, useAuth } from '@/firebase';
 import { collection, serverTimestamp, doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import Link from 'next/link';
 import { toast } from '@/hooks/use-toast';
@@ -25,6 +26,7 @@ export default function AdminPage() {
   const auth = useAuth();
   const { user } = useUser();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [circleToDelete, setCircleToDelete] = useState<string | null>(null);
   
   useEffect(() => {
     if (!user && auth) {
@@ -74,6 +76,10 @@ export default function AdminPage() {
 
   const handleCreateCircle = () => {
     if (!db || !user) return;
+    if (!formData.name) {
+      toast({ title: "Error", description: "El nombre del círculo es obligatorio.", variant: "destructive" });
+      return;
+    }
     if (formData.isPrivate && !formData.password) {
       toast({ title: "Error", description: "Los círculos privados requieren una contraseña.", variant: "destructive" });
       return;
@@ -97,6 +103,14 @@ export default function AdminPage() {
     
     setIsDialogOpen(false);
     toast({ title: "Círculo Creado", description: `El círculo ${customId} se ha configurado exitosamente.` });
+  };
+
+  const handleDeleteCircle = (id: string) => {
+    if (!db) return;
+    const circleRef = doc(db, 'saving_circles', id);
+    deleteDocumentNonBlocking(circleRef);
+    toast({ title: "Círculo Eliminado", description: `El círculo ${id} ha sido removido.` });
+    setCircleToDelete(null);
   };
 
   const installmentOptions = Array.from({ length: 10 }, (_, i) => (i + 1) * 12);
@@ -177,7 +191,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs">Seguro de Vida (% sobre saldo)</Label>
+                        <Label className="text-xs">Seguro de Vida (% sobre saldo puro)</Label>
                         <Input 
                           type="number" 
                           step="0.001" 
@@ -386,7 +400,12 @@ export default function AdminPage() {
                           <DropdownMenuItem asChild>
                             <Link href={`/admin/circles/${circle.id}`}>Gestionar Miembros</Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive font-bold">Suspender</DropdownMenuItem>
+                          <DropdownMenuItem asChild onSelect={(e) => { e.preventDefault(); setCircleToDelete(circle.id); }}>
+                            <div className="text-destructive font-bold flex items-center gap-2 cursor-pointer w-full">
+                              <Trash2 className="h-4 w-4" />
+                              Eliminar Círculo
+                            </div>
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -397,6 +416,31 @@ export default function AdminPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Confirmation Dialog for Deletion */}
+      <AlertDialog open={!!circleToDelete} onOpenChange={(open) => !open && setCircleToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              ¿Estás completamente seguro?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción eliminará el círculo <strong>{circleToDelete}</strong> de forma permanente. 
+              Se perderán todas las configuraciones financieras asociadas a este grupo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => circleToDelete && handleDeleteCircle(circleToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Sí, eliminar círculo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
