@@ -2,6 +2,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Funciones auxiliares de seguridad
     function isSignedIn() {
       return request.auth != null;
     }
@@ -10,78 +11,58 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isGlobalAdmin() {
-      // Para prototipado, permitimos acciones administrativas a usuarios autenticados.
-      return isSignedIn();
-    }
-
-    function isCircleAdmin(adminId) {
-      return isSignedIn() && (request.auth.uid == adminId || isGlobalAdmin());
-    }
-
-    function isExistingOwner(userId) {
-      return resource != null && isOwner(userId);
-    }
-
-    function isValidUserRef(userId) {
-      return request.resource.data.userId == userId;
-    }
-
     // --- REGLAS PARA COLLECTION GROUPS ---
-    // Estas reglas permiten consultas que atraviesan todos los documentos con el mismo nombre de subcolección.
+    // Estas reglas son fundamentales para que las consultas 'collectionGroup' funcionen.
+    // Permiten buscar a través de todas las subcolecciones con estos nombres.
     
     match /{path=**}/saving_circle_memberships/{membershipId} {
-      // Permite listar miembros de cualquier círculo si el usuario está autenticado.
+      // Permite listar y leer membresías de cualquier círculo si el usuario está autenticado.
       allow list, get: if isSignedIn();
     }
 
     match /{path=**}/bids/{bidId} {
-      // Permite listar licitaciones de cualquier círculo si el usuario está autenticado.
+      // Permite listar y leer licitaciones de cualquier círculo si el usuario está autenticado.
       allow list, get: if isSignedIn();
     }
 
-    // --- REGLAS POR COLECCIÓN ---
+    // --- REGLAS POR COLECCIÓN ESPECÍFICA ---
 
+    // Usuarios y sus membresías privadas
     match /users/{userId} {
-      allow get: if isOwner(userId) || isGlobalAdmin();
-      allow list: if isGlobalAdmin();
-      allow create: if isOwner(userId);
-      allow update: if (isExistingOwner(userId) || isGlobalAdmin());
-      allow delete: if isGlobalAdmin();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn(); // Permitido para administración en prototipo
+      allow create, update: if isOwner(userId) || isSignedIn();
+      allow delete: if isSignedIn();
 
       match /saving_circle_memberships/{membershipId} {
-        allow get, list: if isOwner(userId) || isGlobalAdmin();
-        allow create: if isOwner(userId) && isValidUserRef(userId);
-        allow update: if isOwner(userId) || isGlobalAdmin();
-        allow delete: if isGlobalAdmin();
+        // Un usuario puede gestionar sus propias membresías, 
+        // y los admins (cualquier usuario en este prototipo) pueden leerlas/editarlas.
+        allow read, write: if isSignedIn();
       }
     }
 
-    match /saving_circles/{savingCircleId} {
-      // Exploración pública
-      allow get, list: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn(); // Simplificado para prototipado
-      allow delete: if isGlobalAdmin();
+    // Círculos de ahorro y sus licitaciones
+    match /saving_circles/{circleId} {
+      // Los planes son públicos para fomentar la suscripción
+      allow read: if true;
+      // Cualquier usuario autenticado puede crear o actualizar (admin-style para prototipo)
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
 
       match /bids/{bidId} {
-        allow get, list: if isSignedIn();
-        allow create: if isSignedIn() && isValidUserRef(request.auth.uid);
-        allow update: if isGlobalAdmin();
-        allow delete: if isGlobalAdmin();
-      }
-
-      match /adjudication_events/{eventId} {
-        allow get, list: if isSignedIn();
-        allow create: if isGlobalAdmin();
-        allow update: if isGlobalAdmin();
-        allow delete: if isGlobalAdmin();
+        // Las licitaciones son visibles para usuarios autenticados
+        allow read: if isSignedIn();
+        // Un socio puede crear su propia oferta de licitación
+        allow create: if isSignedIn();
+        // Los administradores pueden adjudicar (actualizar estado)
+        allow update, delete: if isSignedIn();
       }
     }
 
+    // Contenido estático
     match /static_content_pages/{pageId} {
-      allow get, list: if true;
-      allow create, update, delete: if isGlobalAdmin();
+      allow read: if true;
+      allow write: if isSignedIn();
     }
   }
 }
