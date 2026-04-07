@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -199,7 +198,6 @@ export default function CirclePlanPage() {
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild className="rounded-full">
           <Link href="/explore">
-            <path d="M19 12H5" /><path d="M12 19l-7-7 7-7" />
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
