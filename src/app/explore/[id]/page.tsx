@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -26,7 +25,6 @@ export default function CirclePlanPage() {
   const [mounted, setMounted] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
-  const [isUnlocking, setIsUnlocking] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -110,8 +108,8 @@ export default function CirclePlanPage() {
 
   const installments = Array.from({ length: totalCuotas }, (_, i) => {
     const num = i + 1;
-    const totalAlicuotasPagas = alicuotaPura * i;
-    const saldoCapitalPuro = capitalTotal - totalAlicuotasPagas;
+    const totalAlicuotasPagasAnterior = alicuotaPura * i;
+    const saldoCapitalPuro = capitalTotal - totalAlicuotasPagasAnterior;
     const currentInsurance = saldoCapitalPuro * lifeInsRate;
     const currentSubFee = num <= installmentsWithSubFee ? proratedSubFee : 0;
     const currentTotal = alicuotaPura + adminFeeMensual + currentInsurance + currentSubFee;
@@ -249,12 +247,12 @@ export default function CirclePlanPage() {
                       Costo Financiero Total (CFT)
                     </div>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      Cálculo basado en Gasto Administrativo ({(adminRate * 100).toFixed(1)}% alícuota), Seguro de Vida decreciente ({(lifeInsRate * 100).toFixed(2)}% sobre saldo) y Derecho de Suscripción ({(subRate * 100).toFixed(1)}%) prorrateado.
+                      Cálculo basado en Gasto Administrativo ({(adminRate * 100).toFixed(1)}% alícuota), Seguro de Vida decreciente ({(lifeInsRate * 100).toFixed(2)}% sobre saldo puro) y Derecho de Suscripción ({(subRate * 100).toFixed(1)}%) prorrateado.
                     </p>
                   </div>
                   <div className="text-center md:text-right">
                     <div className="text-4xl font-black text-primary">{cftAverage.toFixed(2)}%</div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Costo Total del Plan</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Carga Total del Plan</span>
                   </div>
                 </div>
               </div>
@@ -366,10 +364,10 @@ export default function CirclePlanPage() {
                  <h4 className="text-xs font-bold uppercase tracking-widest opacity-70">Resumen del Plan:</h4>
                  <div className="bg-white/10 p-4 rounded-xl space-y-3">
                     <p className="text-[10px] leading-relaxed">
-                      • <strong>Administrativo:</strong> {(adminRate * 100).toFixed(1)}% de la alícuota puro (US$ {adminFeeMensual.toFixed(2)}).
+                      • <strong>Administrativo:</strong> {(adminRate * 100).toFixed(1)}% de la alícuota pura (US$ {adminFeeMensual.toFixed(2)}).
                     </p>
                     <p className="text-[10px] leading-relaxed">
-                      • <strong>Seguro Vida:</strong> {(lifeInsRate * 100).toFixed(2)}% sobre el saldo de capital puro. Disminuye con cada pago.
+                      • <strong>Seguro Vida:</strong> {(lifeInsRate * 100).toFixed(2)}% sobre el saldo de capital puro. Disminuye mensualmente.
                     </p>
                     <p className="text-[10px] leading-relaxed">
                       • <strong>Suscripción:</strong> {(subRate * 100).toFixed(1)}% del capital, prorrateado en los primeros {installmentsWithSubFee} meses.

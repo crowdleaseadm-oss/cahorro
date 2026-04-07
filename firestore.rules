@@ -8,7 +8,7 @@ service cloud.firestore {
     }
 
     // REGLAS PARA CONSULTAS DE GRUPO (Collection Group)
-    // Se definen con {path=**} para que coincidan en cualquier profundidad.
+    // Es crítico que estas reglas usen {path=**} para permitir consultas globales.
     match /{path=**}/saving_circle_memberships/{membershipId} {
       allow read, write: if isSignedIn();
     }
@@ -23,7 +23,7 @@ service cloud.firestore {
       allow create, update: if isSignedIn() && request.auth.uid == userId;
       allow delete: if false;
 
-      // Regla local para acceso directo
+      // Acceso directo a subcolecciones
       match /saving_circle_memberships/{membershipId} {
         allow read, write: if isSignedIn();
       }
