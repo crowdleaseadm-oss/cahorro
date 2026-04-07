@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,6 +16,7 @@ import { useDoc, useFirestore, useUser, useMemoFirebase, useCollection } from '@
 import { doc, collection, serverTimestamp, increment, query, where } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export default function CirclePlanPage() {
   const params = useParams();
@@ -44,6 +46,8 @@ export default function CirclePlanPage() {
 
   const { data: existingMemberships, isLoading: membershipCheckLoading } = useCollection(membershipQuery);
   const isAlreadyMember = existingMemberships && existingMemberships.length > 0;
+  const membership = existingMemberships?.[0];
+  const paidCount = membership?.paidInstallmentsCount || 0;
 
   useEffect(() => {
     if (circle && circle.isPrivate) {
@@ -300,61 +304,85 @@ export default function CirclePlanPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {installments.map((inst) => (
-                      <TableRow key={inst.num} className="hover:bg-accent/10 transition-colors">
-                        <TableCell className="font-bold">#{inst.num}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{formatCurrency(inst.saldoCapitalPuro)}</TableCell>
-                        <TableCell className="font-bold text-primary">{formatCurrency(inst.currentTotal)}</TableCell>
-                        <TableCell className="text-right">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-xs gap-1 font-bold h-7 hover:bg-primary/10 text-primary">
-                                <Info className="h-3 w-3" />
-                                Ver Desglose
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-md">
-                              <DialogHeader>
-                                <DialogTitle className="text-primary">Desglose de Cuota #{inst.num}</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4 py-4">
-                                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
-                                  <span className="text-sm font-medium">Alícuota Pura (Capital)</span>
-                                  <span className="font-bold">{formatCurrency(alicuotaPura)}</span>
-                                </div>
-                                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-medium">Gastos Administrativos</span>
-                                    <span className="text-[10px] text-muted-foreground">{(adminRate * 100).toFixed(1)}% de la alícuota</span>
+                    {installments.map((inst) => {
+                      const isPaid = inst.num <= paidCount;
+                      return (
+                        <TableRow 
+                          key={inst.num} 
+                          className={cn(
+                            "hover:bg-accent/10 transition-colors",
+                            isPaid && "bg-green-50/50"
+                          )}
+                        >
+                          <TableCell className="font-bold">
+                            <div className="flex items-center gap-2">
+                              #{inst.num}
+                              {isPaid && (
+                                <Badge variant="outline" className="bg-green-100 text-green-700 border-none text-[10px] py-0 h-5 font-bold">
+                                  Pagada
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">{formatCurrency(inst.saldoCapitalPuro)}</TableCell>
+                          <TableCell className="font-bold text-primary">{formatCurrency(inst.currentTotal)}</TableCell>
+                          <TableCell className="text-right">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm" className="text-xs gap-1 font-bold h-7 hover:bg-primary/10 text-primary">
+                                  <Info className="h-3 w-3" />
+                                  Ver Desglose
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-md">
+                                <DialogHeader>
+                                  <DialogTitle className="text-primary">Desglose de Cuota #{inst.num}</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4 py-4">
+                                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
+                                    <span className="text-sm font-medium">Alícuota Pura (Capital)</span>
+                                    <span className="font-bold">{formatCurrency(alicuotaPura)}</span>
                                   </div>
-                                  <span className="font-bold">{formatCurrency(adminFeeMensual)}</span>
-                                </div>
-                                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-medium">Seguro de Vida</span>
-                                    <span className="text-[10px] text-muted-foreground">{(lifeInsRate * 100).toFixed(2)}% sobre saldo puro { formatCurrency(inst.saldoCapitalPuro) }</span>
-                                  </div>
-                                  <span className="font-bold">{formatCurrency(adminFeeMensual)}</span>
-                                </div>
-                                {inst.currentSubFee > 0 && (
-                                  <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/20">
+                                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
                                     <div className="flex flex-col">
-                                      <span className="text-sm font-bold text-primary">Derecho de Suscripción</span>
-                                      <span className="text-[10px] text-primary/70">Prorrateo {inst.num} de {installmentsWithSubFee} cuotas</span>
+                                      <span className="text-sm font-medium">Gastos Administrativos</span>
+                                      <span className="text-[10px] text-muted-foreground">{(adminRate * 100).toFixed(1)}% de la alícuota</span>
                                     </div>
-                                    <span className="font-bold text-primary">{formatCurrency(inst.currentSubFee)}</span>
+                                    <span className="font-bold">{formatCurrency(adminFeeMensual)}</span>
                                   </div>
-                                )}
-                                <div className="border-t pt-4 flex justify-between items-center">
-                                  <span className="text-lg font-bold">Total Mensual</span>
-                                  <span className="text-2xl font-black text-primary">{formatCurrency(inst.currentTotal)}</span>
+                                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-medium">Seguro de Vida</span>
+                                      <span className="text-[10px] text-muted-foreground">{(lifeInsRate * 100).toFixed(2)}% sobre saldo puro { formatCurrency(inst.saldoCapitalPuro) }</span>
+                                    </div>
+                                    <span className="font-bold">{formatCurrency(adminFeeMensual)}</span>
+                                  </div>
+                                  {inst.currentSubFee > 0 && (
+                                    <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/20">
+                                      <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-primary">Derecho de Suscripción</span>
+                                        <span className="text-[10px] text-primary/70">Prorrateo {inst.num} de {installmentsWithSubFee} cuotas</span>
+                                      </div>
+                                      <span className="font-bold text-primary">{formatCurrency(inst.currentSubFee)}</span>
+                                    </div>
+                                  )}
+                                  <div className="border-t pt-4 flex justify-between items-center">
+                                    <span className="text-lg font-bold">Total Mensual</span>
+                                    <span className="text-2xl font-black text-primary">{formatCurrency(inst.currentTotal)}</span>
+                                  </div>
+                                  {isPaid && (
+                                    <div className="pt-2 flex items-center justify-center gap-2 text-green-600 font-bold text-sm">
+                                      <CheckCircle className="h-4 w-4" />
+                                      Cuota Abonada Correctamente
+                                    </div>
+                                  )}
                                 </div>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                              </DialogContent>
+                            </Dialog>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </ScrollArea>
