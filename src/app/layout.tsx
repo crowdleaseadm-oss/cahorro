@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/dashboard/app-sidebar';
+import { FirebaseClientProvider } from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'Círculo de Ahorro | Tu comunidad financiera',
@@ -21,16 +22,18 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased bg-background overflow-x-hidden">
-        <SidebarProvider>
-          <div className="flex min-h-screen w-full">
-            <AppSidebar />
-            <SidebarInset className="flex-1 bg-background">
-              <main className="w-full h-full p-6 md:p-8 lg:p-10 transition-all duration-300">
-                {children}
-              </main>
-            </SidebarInset>
-          </div>
-        </SidebarProvider>
+        <FirebaseClientProvider>
+          <SidebarProvider>
+            <div className="flex min-h-screen w-full">
+              <AppSidebar />
+              <SidebarInset className="flex-1 bg-background">
+                <main className="w-full h-full p-6 md:p-8 lg:p-10 transition-all duration-300">
+                  {children}
+                </main>
+              </SidebarInset>
+            </div>
+          </SidebarProvider>
+        </FirebaseClientProvider>
       </body>
     </html>
   );
