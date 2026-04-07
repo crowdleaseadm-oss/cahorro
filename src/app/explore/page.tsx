@@ -1,6 +1,7 @@
+
 'use client';
 
-import { Search, Filter, Users, Calendar, Target, ChevronRight, Info, Loader2 } from "lucide-react"
+import { Search, Filter, Users, Calendar, Target, ChevronRight, Info, Loader2, Lock, Eye } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -65,9 +66,9 @@ export default function ExplorePage() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
           {filteredCircles.map((circle) => {
             const alicuota = circle.targetCapital / circle.totalInstallments;
-            const adminFee = alicuota * 0.10;
-            const insurance = circle.targetCapital * 0.0009; // Seguro sobre saldo inicial
-            const totalSubFee = circle.targetCapital * 0.03;
+            const adminFee = alicuota * (circle.administrativeFeeRate || 0.10);
+            const insurance = circle.targetCapital * (circle.lifeInsuranceRate || 0.0009);
+            const totalSubFee = circle.targetCapital * (circle.subscriptionFeeRate || 0.03);
             const subFeeMensual = totalSubFee / Math.ceil(circle.totalInstallments * 0.20);
             
             const totalFeeInicial = alicuota + adminFee + insurance + subFeeMensual;
@@ -78,9 +79,20 @@ export default function ExplorePage() {
                 <div className={`h-2 w-full ${isFull ? 'bg-orange-500' : 'bg-primary'}`} />
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start mb-2">
-                    <Badge variant={isFull ? "secondary" : "default"} className={`border-none font-bold px-3 ${isFull ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
-                      {isFull ? 'ACTIVO (Completo)' : 'ABIERTO'}
-                    </Badge>
+                    <div className="flex gap-1 flex-wrap">
+                      <Badge variant={isFull ? "secondary" : "default"} className={`border-none font-bold px-3 ${isFull ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                        {isFull ? 'ACTIVO (Completo)' : 'ABIERTO'}
+                      </Badge>
+                      {circle.isPrivate ? (
+                        <Badge variant="outline" className="gap-1 border-orange-200 text-orange-700 bg-orange-50">
+                          <Lock className="h-3 w-3" /> Privado
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 border-blue-200 text-blue-700 bg-blue-50">
+                          <Eye className="h-3 w-3" /> Público
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center text-xs text-muted-foreground font-medium">
                       <Users className="h-3 w-3 mr-1" />
                       {circle.currentMemberCount || 0}/{circle.memberCapacity}
@@ -111,7 +123,7 @@ export default function ExplorePage() {
                             <TooltipContent className="max-w-xs space-y-1">
                               <p className="text-xs font-bold">Conceptos de cuota inicial:</p>
                               <p className="text-[10px]">Alícuota: ${alicuota.toFixed(2)}</p>
-                              <p className="text-[10px]">Gastos Admin (10%): ${adminFee.toFixed(2)}</p>
+                              <p className="text-[10px]">Gastos Admin: ${adminFee.toFixed(2)}</p>
                               <p className="text-[10px]">Suscripción + Seguro: ${(subFeeMensual + insurance).toFixed(2)}</p>
                             </TooltipContent>
                           </Tooltip>

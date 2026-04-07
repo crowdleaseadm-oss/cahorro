@@ -1,13 +1,15 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, Info, Loader2, DollarSign, Calendar } from "lucide-react"
+import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, Info, Loader2, DollarSign, Calendar, Lock, Unlock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
@@ -22,6 +24,9 @@ export default function CirclePlanPage() {
   const db = useFirestore();
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -29,6 +34,21 @@ export default function CirclePlanPage() {
 
   const circleRef = useMemoFirebase(() => (db && params.id ? doc(db, 'saving_circles', params.id as string) : null), [db, params.id]);
   const { data: circle, isLoading: circleLoading } = useDoc(circleRef);
+
+  useEffect(() => {
+    if (circle && circle.isPrivate) {
+      setIsLocked(true);
+    }
+  }, [circle]);
+
+  const handleUnlock = () => {
+    if (passwordInput === circle?.password) {
+      setIsLocked(false);
+      toast({ title: "Acceso Concedido", description: "Ahora puede ver los detalles del plan." });
+    } else {
+      toast({ title: "Error", description: "Contraseña incorrecta.", variant: "destructive" });
+    }
+  };
 
   if (circleLoading) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
@@ -45,21 +65,54 @@ export default function CirclePlanPage() {
     </div>
   );
 
+  if (isLocked) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center space-y-6 max-w-md mx-auto">
+        <div className="p-6 bg-orange-100 rounded-full">
+          <Lock className="h-12 w-12 text-orange-600" />
+        </div>
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl font-bold">Círculo Privado</h1>
+          <p className="text-muted-foreground">Este grupo requiere una contraseña de acceso para ver su proyección financiera.</p>
+        </div>
+        <div className="w-full space-y-4">
+          <Input 
+            type="password" 
+            placeholder="Ingrese la contraseña" 
+            value={passwordInput}
+            onChange={(e) => setPasswordInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+            className="text-center h-12 text-lg"
+          />
+          <Button onClick={handleUnlock} className="w-full h-12 text-lg font-bold gap-2">
+            <Unlock className="h-5 w-5" />
+            Desbloquear Plan
+          </Button>
+          <Button asChild variant="ghost" className="w-full">
+            <Link href="/explore">Volver a Explorar</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   const capitalTotal = circle.targetCapital;
   const totalCuotas = circle.totalInstallments;
-  
+  const adminRate = circle.administrativeFeeRate || 0.10;
+  const subRate = circle.subscriptionFeeRate || 0.03;
+  const lifeInsRate = circle.lifeInsuranceRate || 0.0009;
+
   const alicuotaPura = capitalTotal / totalCuotas;
-  const adminFeeMensual = alicuotaPura * 0.10;
-  const totalSubFee = capitalTotal * 0.03;
+  const adminFeeMensual = alicuotaPura * adminRate;
+  const totalSubFee = capitalTotal * subRate;
   const installmentsWithSubFee = Math.ceil(totalCuotas * 0.20);
   const proratedSubFee = totalSubFee / installmentsWithSubFee;
-  const insuranceRate = 0.0009;
 
   const installments = Array.from({ length: totalCuotas }, (_, i) => {
     const num = i + 1;
     const totalAlicuotasPagas = alicuotaPura * i;
     const saldoCapitalPuro = capitalTotal - totalAlicuotasPagas;
-    const currentInsurance = saldoCapitalPuro * insuranceRate;
+    const currentInsurance = saldoCapitalPuro * lifeInsRate;
     const currentSubFee = num <= installmentsWithSubFee ? proratedSubFee : 0;
     const currentTotal = alicuotaPura + adminFeeMensual + currentInsurance + currentSubFee;
     
@@ -144,9 +197,16 @@ export default function CirclePlanPage() {
                   <CardTitle className="text-3xl font-bold text-primary">{circle.name}</CardTitle>
                   <CardDescription className="text-lg">Capital Suscripto: {formatCurrency(capitalTotal)} USD</CardDescription>
                 </div>
-                <Badge className={`${isFull ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'} border-none font-bold px-4 py-1`}>
-                  {isFull ? 'ACTIVO (Completo)' : 'ABIERTO'}
-                </Badge>
+                <div className="flex flex-col items-end gap-2">
+                  <Badge className={`${isFull ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'} border-none font-bold px-4 py-1`}>
+                    {isFull ? 'ACTIVO (Completo)' : 'ABIERTO'}
+                  </Badge>
+                  {circle.isPrivate && (
+                    <Badge variant="outline" className="gap-1 border-orange-200 text-orange-700 bg-orange-50">
+                      <Lock className="h-3 w-3" /> Privado
+                    </Badge>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="space-y-10">
@@ -189,7 +249,7 @@ export default function CirclePlanPage() {
                       Costo Financiero Total (CFT)
                     </div>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      Cálculo basado en Gasto Administrativo (10% alícuota), Seguro de Vida decreciente (0.09% sobre saldo) y Derecho de Suscripción (3%) prorrateado.
+                      Cálculo basado en Gasto Administrativo ({(adminRate * 100).toFixed(1)}% alícuota), Seguro de Vida decreciente ({(lifeInsRate * 100).toFixed(2)}% sobre saldo) y Derecho de Suscripción ({(subRate * 100).toFixed(1)}%) prorrateado.
                     </p>
                   </div>
                   <div className="text-center md:text-right">
@@ -244,14 +304,14 @@ export default function CirclePlanPage() {
                                 <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
                                   <div className="flex flex-col">
                                     <span className="text-sm font-medium">Gastos Administrativos</span>
-                                    <span className="text-[10px] text-muted-foreground">10% de la alícuota</span>
+                                    <span className="text-[10px] text-muted-foreground">{(adminRate * 100).toFixed(1)}% de la alícuota</span>
                                   </div>
                                   <span className="font-bold">{formatCurrency(adminFeeMensual)}</span>
                                 </div>
                                 <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
                                   <div className="flex flex-col">
                                     <span className="text-sm font-medium">Seguro de Vida</span>
-                                    <span className="text-[10px] text-muted-foreground">0.09% sobre saldo puro { formatCurrency(inst.saldoCapitalPuro) }</span>
+                                    <span className="text-[10px] text-muted-foreground">{(lifeInsRate * 100).toFixed(2)}% sobre saldo puro { formatCurrency(inst.saldoCapitalPuro) }</span>
                                   </div>
                                   <span className="font-bold">{formatCurrency(inst.currentInsurance)}</span>
                                 </div>
@@ -306,13 +366,13 @@ export default function CirclePlanPage() {
                  <h4 className="text-xs font-bold uppercase tracking-widest opacity-70">Resumen del Plan:</h4>
                  <div className="bg-white/10 p-4 rounded-xl space-y-3">
                     <p className="text-[10px] leading-relaxed">
-                      • <strong>Administrativo:</strong> 10% de la alícuota puro (US$ {adminFeeMensual.toFixed(2)}).
+                      • <strong>Administrativo:</strong> {(adminRate * 100).toFixed(1)}% de la alícuota puro (US$ {adminFeeMensual.toFixed(2)}).
                     </p>
                     <p className="text-[10px] leading-relaxed">
-                      • <strong>Seguro Vida:</strong> 0.09% sobre el saldo de capital puro. Disminuye con cada pago.
+                      • <strong>Seguro Vida:</strong> {(lifeInsRate * 100).toFixed(2)}% sobre el saldo de capital puro. Disminuye con cada pago.
                     </p>
                     <p className="text-[10px] leading-relaxed">
-                      • <strong>Suscripción:</strong> 3% del capital, prorrateado en los primeros {installmentsWithSubFee} meses.
+                      • <strong>Suscripción:</strong> {(subRate * 100).toFixed(1)}% del capital, prorrateado en los primeros {installmentsWithSubFee} meses.
                     </p>
                  </div>
               </div>

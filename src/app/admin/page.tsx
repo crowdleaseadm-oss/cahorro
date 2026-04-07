@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { ShieldCheck, Users, PiggyBank, MoreHorizontal, Plus, Search, DollarSign, Calculator } from "lucide-react"
+import { ShieldCheck, Users, PiggyBank, MoreHorizontal, Plus, Search, DollarSign, Calculator, Settings2, Eye, EyeOff, Lock } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
@@ -12,11 +12,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 import { useFirestore, useCollection, useMemoFirebase, useUser, useAuth } from '@/firebase';
 import { collection, serverTimestamp } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import Link from 'next/link';
+import { toast } from '@/hooks/use-toast';
 
 export default function AdminPage() {
   const db = useFirestore();
@@ -37,23 +39,20 @@ export default function AdminPage() {
     name: '',
     targetCapital: 50000,
     totalInstallments: 84,
-    subscriptionFeeRate: 0.03,
-    administrativeFeeRate: 0.10, // 10% de la alícuota
+    subscriptionFeeRate: 0.03, // 3%
+    administrativeFeeRate: 0.10, // 10%
+    lifeInsuranceRate: 0.0009, // 0.09%
     drawMethodCount: 1,
     bidMethodCount: 1,
+    isPrivate: false,
+    password: '',
   });
 
   const calculations = useMemo(() => {
     const alicuota = formData.targetCapital / formData.totalInstallments;
-    
-    // 1. Gasto admin: 10% de la alícuota
-    const adminFee = alicuota * 0.10;
-    
-    // 2. Seguro de vida inicial: 0.09% del capital puro total (saldo inicial)
-    const lifeInsuranceInicial = formData.targetCapital * 0.0009;
-    
-    // 3. Suscripción: 3% prorrateado en el primer 20%
-    const totalSubFee = formData.targetCapital * 0.03;
+    const adminFee = alicuota * formData.administrativeFeeRate;
+    const lifeInsuranceInicial = formData.targetCapital * formData.lifeInsuranceRate;
+    const totalSubFee = formData.targetCapital * formData.subscriptionFeeRate;
     const cuotasSuscripcion = Math.ceil(formData.totalInstallments * 0.20);
     const subFeeMensual = totalSubFee / cuotasSuscripcion;
 
@@ -65,11 +64,14 @@ export default function AdminPage() {
 
   const handleCreateCircle = () => {
     if (!db || !user) return;
+    if (formData.isPrivate && !formData.password) {
+      toast({ title: "Error", description: "Los círculos privados requieren una contraseña.", variant: "destructive" });
+      return;
+    }
     
     const newCircle = {
       ...formData,
       installmentValue: calculations.alicuota,
-      lifeInsuranceRate: 0.0009,
       memberCapacity: calculations.capacity,
       currentMemberCount: 0,
       status: 'Active',
@@ -80,6 +82,7 @@ export default function AdminPage() {
 
     addDocumentNonBlocking(collection(db, 'saving_circles'), newCircle);
     setIsDialogOpen(false);
+    toast({ title: "Círculo Creado", description: `El círculo ${formData.name} se ha configurado exitosamente.` });
   };
 
   const installmentOptions = Array.from({ length: 10 }, (_, i) => (i + 1) * 12);
@@ -93,7 +96,7 @@ export default function AdminPage() {
             <ShieldCheck className="h-8 w-8 text-primary" />
             Panel de Administración
           </h1>
-          <p className="text-muted-foreground mt-1">Gestión de Círculos de Ahorro en USD.</p>
+          <p className="text-muted-foreground mt-1">Gestión avanzada de Círculos de Ahorro.</p>
         </div>
         <div className="flex gap-2">
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -103,17 +106,17 @@ export default function AdminPage() {
                 Nuevo Círculo
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
               <DialogHeader>
                 <DialogTitle>Configurar Nuevo Círculo</DialogTitle>
                 <DialogDescription>
-                  Define los parámetros financieros del grupo. El capital debe ser múltiplo de $5,000.
+                  Define los parámetros financieros y la visibilidad del grupo.
                 </DialogDescription>
               </DialogHeader>
               
               <div className="grid gap-6 py-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-2 col-span-2 md:col-span-1">
                     <Label htmlFor="name">Nombre del Círculo</Label>
                     <Input 
                       id="name" 
@@ -122,7 +125,7 @@ export default function AdminPage() {
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 col-span-2 md:col-span-1">
                     <Label htmlFor="capital">Capital Suscripto (USD)</Label>
                     <Input 
                       id="capital" 
@@ -134,7 +137,75 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border-t pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 font-bold text-sm text-primary">
+                      <Settings2 className="h-4 w-4" />
+                      Editor de Tasas
+                    </div>
+                    <div className="grid gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Gasto Administrativo (% de alícuota)</Label>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          value={formData.administrativeFeeRate}
+                          onChange={(e) => setFormData({...formData, administrativeFeeRate: Number(e.target.value)})}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Suscripción (% de capital total)</Label>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          value={formData.subscriptionFeeRate}
+                          onChange={(e) => setFormData({...formData, subscriptionFeeRate: Number(e.target.value)})}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Seguro de Vida (% sobre saldo)</Label>
+                        <Input 
+                          type="number" 
+                          step="0.0001" 
+                          value={formData.lifeInsuranceRate}
+                          onChange={(e) => setFormData({...formData, lifeInsuranceRate: Number(e.target.value)})}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 font-bold text-sm text-primary">
+                      <Lock className="h-4 w-4" />
+                      Privacidad y Acceso
+                    </div>
+                    <div className="bg-muted/30 p-4 rounded-xl space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm">Círculo Privado</Label>
+                          <p className="text-[10px] text-muted-foreground">Requiere contraseña para ver detalles.</p>
+                        </div>
+                        <Switch 
+                          checked={formData.isPrivate} 
+                          onCheckedChange={(checked) => setFormData({...formData, isPrivate: checked})} 
+                        />
+                      </div>
+                      {formData.isPrivate && (
+                        <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+                          <Label className="text-xs">Contraseña de Acceso</Label>
+                          <Input 
+                            type="password" 
+                            placeholder="Defina una clave" 
+                            value={formData.password}
+                            onChange={(e) => setFormData({...formData, password: e.target.value})}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 border-t pt-6">
                   <div className="space-y-2">
                     <Label htmlFor="installments">Plazo (Meses)</Label>
                     <Select 
@@ -197,7 +268,7 @@ export default function AdminPage() {
                 <div className="bg-accent/30 p-4 rounded-xl space-y-3">
                   <div className="flex items-center gap-2 font-bold text-sm text-primary mb-1">
                     <Calculator className="h-4 w-4" />
-                    Proyección Cuota #1
+                    Proyección Cuota #1 (Simulación)
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[10px]">
                     <div>
@@ -205,11 +276,11 @@ export default function AdminPage() {
                       <span className="font-bold text-foreground">${calculations.alicuota.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block uppercase">Admin (10%)</span>
+                      <span className="text-muted-foreground block uppercase">Admin</span>
                       <span className="font-bold text-foreground">${calculations.adminFee.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block uppercase">Seguro (0.09%)</span>
+                      <span className="text-muted-foreground block uppercase">Seguro</span>
                       <span className="font-bold text-foreground">${calculations.lifeInsuranceInicial.toFixed(2)}</span>
                     </div>
                     <div className="bg-primary/10 p-1 rounded">
@@ -217,9 +288,6 @@ export default function AdminPage() {
                       <span className="font-black text-primary text-sm">${calculations.totalCuotaInicial.toFixed(2)}</span>
                     </div>
                   </div>
-                  <p className="text-[9px] text-muted-foreground italic mt-1">
-                    * El seguro de vida se recalcula mensualmente sobre el saldo de capital puro pendiente.
-                  </p>
                 </div>
               </div>
 
@@ -250,11 +318,11 @@ export default function AdminPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre / ID</TableHead>
+                <TableHead>Privacidad</TableHead>
                 <TableHead>Cap. Suscripto</TableHead>
                 <TableHead>Cuotas</TableHead>
                 <TableHead>Alícuota</TableHead>
                 <TableHead>Estado Llenado</TableHead>
-                <TableHead>Estado Admin</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -271,6 +339,17 @@ export default function AdminPage() {
                         <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{circle.id}</span>
                       </div>
                     </TableCell>
+                    <TableCell>
+                      {circle.isPrivate ? (
+                        <Badge variant="outline" className="gap-1 border-orange-200 text-orange-700 bg-orange-50">
+                          <Lock className="h-3 w-3" /> Privado
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="gap-1 border-blue-200 text-blue-700 bg-blue-50">
+                          <Eye className="h-3 w-3" /> Público
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">${circle.targetCapital.toLocaleString()} USD</TableCell>
                     <TableCell>{circle.totalInstallments}</TableCell>
                     <TableCell className="text-primary font-bold">${(circle.targetCapital / circle.totalInstallments).toFixed(2)}</TableCell>
@@ -281,11 +360,6 @@ export default function AdminPage() {
                         </Badge>
                         <span className="text-[10px] text-center">{circle.currentMemberCount || 0} / {circle.memberCapacity}</span>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {circle.status}
-                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -298,7 +372,6 @@ export default function AdminPage() {
                           <DropdownMenuItem asChild>
                             <Link href={`/admin/circles/${circle.id}`}>Gestionar Miembros</Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem>Editar Tasas</DropdownMenuItem>
                           <DropdownMenuItem className="text-destructive font-bold">Suspender</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
