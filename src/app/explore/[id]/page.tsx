@@ -2,12 +2,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, CheckCircle2, Info, Loader2, DollarSign, Calendar } from "lucide-react"
+import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, CheckCircle2, Info, Loader2, DollarSign, Calendar, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
@@ -45,13 +46,20 @@ export default function CirclePlanPage() {
     </div>
   );
 
+  // Cálculos financieros base
   const alicuota = circle.targetCapital / circle.totalInstallments;
-  const subFee = alicuota * (circle.subscriptionFeeRate || 0.03);
-  const adminFee = alicuota * (circle.administrativeFeeRate || 0.02);
-  const insurance = circle.targetCapital * 0.0009;
-  const totalMonthly = alicuota + subFee + adminFee + insurance;
+  const subFeeRate = circle.subscriptionFeeRate || 0.03;
+  const adminFeeRate = circle.administrativeFeeRate || 0.02;
+  const insuranceRate = 0.0009;
+
+  // Totales
+  const subFeeTotal = alicuota * subFeeRate;
+  const adminFeeTotal = alicuota * adminFeeRate;
+  const insuranceTotal = circle.targetCapital * insuranceRate;
+  const totalMonthly = alicuota + adminFeeTotal + insuranceTotal;
   
-  const totalPaidEstimate = totalMonthly * circle.totalInstallments;
+  // CFT Proyectado
+  const totalPaidEstimate = (totalMonthly * circle.totalInstallments) + subFeeTotal;
   const cftAverage = ((totalPaidEstimate - circle.targetCapital) / circle.targetCapital) * 100;
 
   const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
@@ -86,7 +94,6 @@ export default function CirclePlanPage() {
     const membershipsCol = collection(db, 'users', user.uid, 'saving_circle_memberships');
     addDocumentNonBlocking(membershipsCol, membershipData);
     
-    // Incrementar contador en el círculo
     const circleDocRef = doc(db, 'saving_circles', circle.id);
     updateDocumentNonBlocking(circleDocRef, { currentMemberCount: increment(1) });
 
@@ -102,6 +109,15 @@ export default function CirclePlanPage() {
     return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  // Generar datos de las 84 cuotas
+  const installments = Array.from({ length: circle.totalInstallments }, (_, i) => {
+    const num = i + 1;
+    // En el sistema de círculos, la cuota 1 suele incluir el derecho de suscripción
+    const currentSubFee = num === 1 ? subFeeTotal : 0;
+    const currentTotal = totalMonthly + currentSubFee;
+    return { num, currentSubFee, currentTotal };
+  });
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20">
       <div className="flex items-center gap-4">
@@ -110,11 +126,10 @@ export default function CirclePlanPage() {
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight">Análisis de Plan Financiero</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-primary">Detalle del Plan Financiero</h1>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        {/* Main Info */}
         <div className="lg:col-span-2 space-y-8">
           <Card className="border-none shadow-sm bg-white overflow-hidden">
             <div className={`h-2 w-full ${isFull ? 'bg-orange-500' : 'bg-primary'}`} />
@@ -166,16 +181,15 @@ export default function CirclePlanPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 font-bold text-primary text-lg">
                       <Calculator className="h-5 w-5" />
-                      Costo Financiero Total (CFT) Promedio
+                      Costo Financiero Total (CFT)
                     </div>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      Este es el costo total aproximado sobre el capital por gastos administrativos y seguros. 
-                      Este porcentaje puede reducirse significativamente al licitar o adelantar cuotas.
+                      Representa el costo total sobre el capital por gastos administrativos y seguros.
                     </p>
                   </div>
                   <div className="text-center md:text-right">
                     <div className="text-4xl font-black text-primary">{cftAverage.toFixed(2)}%</div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Estimado Anual</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total del Plan</span>
                   </div>
                 </div>
               </div>
@@ -184,60 +198,75 @@ export default function CirclePlanPage() {
 
           <Card className="border-none shadow-sm bg-white overflow-hidden">
             <CardHeader>
-              <CardTitle className="text-xl font-bold">Plan de Cuotas (Ejemplo Proyectado)</CardTitle>
-              <CardDescription>Composición estimada de las primeras cuotas en USD.</CardDescription>
+              <CardTitle className="text-xl font-bold">Proyección de {circle.totalInstallments} Cuotas</CardTitle>
+              <CardDescription>Planificación detallada de aportes mensuales.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader className="bg-muted/50">
-                  <TableRow>
-                    <TableHead className="font-bold">Cuota</TableHead>
-                    <TableHead className="font-bold">Vencimiento</TableHead>
-                    <TableHead className="font-bold">Total Aproximado</TableHead>
-                    <TableHead className="font-bold text-right">Detalle</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <TableRow key={num} className="hover:bg-accent/10 transition-colors">
-                      <TableCell className="font-bold">#{num}</TableCell>
-                      <TableCell className="text-muted-foreground">Mes {num}</TableCell>
-                      <TableCell className="font-bold text-primary">{formatCurrency(totalMonthly)}</TableCell>
-                      <TableCell className="text-right">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-xs gap-1 font-bold h-7">
+              <ScrollArea className="h-[500px] w-full pr-4">
+                <Table>
+                  <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                    <TableRow>
+                      <TableHead className="font-bold">Cuota</TableHead>
+                      <TableHead className="font-bold">Vencimiento</TableHead>
+                      <TableHead className="font-bold">Total Mensual</TableHead>
+                      <TableHead className="font-bold text-right">Acción</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {installments.map((inst) => (
+                      <TableRow key={inst.num} className="hover:bg-accent/10 transition-colors">
+                        <TableCell className="font-bold">#{inst.num}</TableCell>
+                        <TableCell className="text-muted-foreground">Mes {inst.num}</TableCell>
+                        <TableCell className="font-bold text-primary">{formatCurrency(inst.currentTotal)}</TableCell>
+                        <TableCell className="text-right">
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-xs gap-1 font-bold h-7 hover:bg-primary/10 text-primary">
                                 <Info className="h-3 w-3" />
                                 Ver Desglose
                               </Button>
-                            </TooltipTrigger>
-                            <TooltipContent className="p-4 space-y-2">
-                              <div className="flex justify-between gap-8">
-                                <span className="text-xs">Alícuota Pura:</span>
-                                <span className="text-xs font-bold">{formatCurrency(alicuota)}</span>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-md">
+                              <DialogHeader>
+                                <DialogTitle className="text-primary">Desglose de Cuota #{inst.num}</DialogTitle>
+                                <DialogDescription>Composición detallada del aporte mensual en USD.</DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4 py-4">
+                                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
+                                  <span className="text-sm font-medium">Alícuota Pura (Capital)</span>
+                                  <span className="font-bold">{formatCurrency(alicuota)}</span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
+                                  <span className="text-sm font-medium">Gastos Administrativos</span>
+                                  <span className="font-bold">{formatCurrency(adminFeeTotal)}</span>
+                                </div>
+                                <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
+                                  <span className="text-sm font-medium">Seguro de Vida (0.09%)</span>
+                                  <span className="font-bold">{formatCurrency(insuranceTotal)}</span>
+                                </div>
+                                {inst.currentSubFee > 0 && (
+                                  <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/20">
+                                    <span className="text-sm font-bold text-primary">Derecho de Suscripción</span>
+                                    <span className="font-bold text-primary">{formatCurrency(inst.currentSubFee)}</span>
+                                  </div>
+                                )}
+                                <div className="border-t pt-4 flex justify-between items-center">
+                                  <span className="text-lg font-bold">Total a Pagar</span>
+                                  <span className="text-2xl font-black text-primary">{formatCurrency(inst.currentTotal)}</span>
+                                </div>
                               </div>
-                              <div className="flex justify-between gap-8">
-                                <span className="text-xs">Gastos Adm.:</span>
-                                <span className="text-xs font-bold">{formatCurrency(subFee + adminFee)}</span>
-                              </div>
-                              <div className="flex justify-between gap-8">
-                                <span className="text-xs">Seguro Vida:</span>
-                                <span className="text-xs font-bold">{formatCurrency(insurance)}</span>
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                            </DialogContent>
+                          </Dialog>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </CardContent>
           </Card>
         </div>
 
-        {/* Action Sidebar */}
         <div className="space-y-6">
           <Card className="border-none shadow-xl bg-primary text-white sticky top-8">
             <CardHeader className="pb-4">
@@ -245,7 +274,7 @@ export default function CirclePlanPage() {
                 <ShieldCheck className="h-6 w-6" />
                 Suscripción USD
               </CardTitle>
-              <CardDescription className="text-white/80">Ahorro colaborativo sin intereses.</CardDescription>
+              <CardDescription className="text-white/80">Ahorro colaborativo sin intereses bancarios.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
@@ -264,15 +293,15 @@ export default function CirclePlanPage() {
                  <div className="space-y-2">
                     <div className="flex items-center gap-2 text-xs">
                       <CheckCircle2 className="h-4 w-4" />
-                      Seguro de Vida (0.09%)
+                      Seguro de Vida (Respaldo Capital)
                     </div>
                     <div className="flex items-center gap-2 text-xs">
                       <CheckCircle2 className="h-4 w-4" />
-                      Respaldo Contractual
+                      Auditoría Mensual Externa
                     </div>
                     <div className="flex items-center gap-2 text-xs">
                       <CheckCircle2 className="h-4 w-4" />
-                      Capital Ajustable en USD
+                      Valor de Cuota Protegido en USD
                     </div>
                  </div>
               </div>
