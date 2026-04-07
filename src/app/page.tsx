@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { PiggyBank, TrendingUp, Users, Calendar, Award, DollarSign, ArrowUpRight } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -10,6 +11,12 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table"
 import Link from "next/link"
 
 export default function Dashboard() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Financial metrics based on 50K circle with 24 installments
   const activeCircles = [
     {
@@ -33,6 +40,11 @@ export default function Dashboard() {
     { date: "15 Abr 2024", concept: "Cuota 6/24 - Alicuota + Gastos", amount: 2350, status: "Completado" },
     { date: "15 Mar 2024", concept: "Cuota 5/24 - Alicuota + Gastos", amount: 2350, status: "Completado" },
   ]
+
+  const formatCurrency = (val: number) => {
+    if (!mounted) return `$${val.toFixed(2)}`;
+    return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -58,7 +70,7 @@ export default function Dashboard() {
             <TrendingUp className="h-4 w-4 opacity-80" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${capitalPaid.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold">{formatCurrency(capitalPaid)}</div>
             <p className="text-xs opacity-70 mt-1">Monto en alícuotas puras (USD)</p>
           </CardContent>
         </Card>
@@ -68,7 +80,7 @@ export default function Dashboard() {
             <DollarSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">${capitalBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(capitalBalance)}</div>
             <p className="text-xs text-muted-foreground mt-1">Pendiente de suscripción</p>
           </CardContent>
         </Card>
@@ -78,7 +90,7 @@ export default function Dashboard() {
             <Calendar className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">${activeCircles[0].alicuota.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(activeCircles[0].alicuota)}</div>
             <p className="text-xs text-muted-foreground mt-1">Sin contar gastos/seguros</p>
           </CardContent>
         </Card>
@@ -106,7 +118,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{circle.name}</h4>
-                    <span className="text-xs text-muted-foreground">Capital Suscripto: ${circle.targetCapital.toLocaleString()} USD</span>
+                    <span className="text-xs text-muted-foreground">Capital Suscripto: {mounted ? `$${circle.targetCapital.toLocaleString()}` : `$${circle.targetCapital}`} USD</span>
                   </div>
                   <Badge variant="secondary" className="px-2 py-0.5 bg-green-100 text-green-700 border-none">
                     {circle.status}
@@ -123,11 +135,11 @@ export default function Dashboard() {
                   <div className="grid grid-cols-2 gap-6">
                     <div className="flex flex-col">
                       <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Cuota Total</span>
-                      <span className="text-sm font-bold text-primary">${circle.totalFee.toFixed(2)}</span>
+                      <span className="text-sm font-bold text-primary">{formatCurrency(circle.totalFee)}</span>
                     </div>
                     <div className="flex flex-col">
                       <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Saldo Capital</span>
-                      <span className="text-sm font-bold text-foreground">${capitalBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span className="text-sm font-bold text-foreground">{formatCurrency(capitalBalance)}</span>
                     </div>
                   </div>
                   <Button variant="outline" size="sm" asChild className="bg-white border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">
@@ -157,7 +169,7 @@ export default function Dashboard() {
                     </TableCell>
                     <TableCell className="text-right py-4 pr-0">
                       <div className="flex flex-col items-end">
-                        <span className="font-bold text-sm text-primary">-${tx.amount.toFixed(2)}</span>
+                        <span className="font-bold text-sm text-primary">-{formatCurrency(tx.amount)}</span>
                         <span className="text-[10px] font-bold text-secondary-foreground px-1.5 py-0.5 bg-secondary rounded-full">
                           {tx.status}
                         </span>

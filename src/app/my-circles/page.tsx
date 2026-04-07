@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PiggyBank, ArrowRight, Target, Calendar, DollarSign, Activity, Gavel, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -21,9 +21,19 @@ export default function MyCirclesPage() {
   const [isBidding, setIsBidding] = useState(false);
   const [bidAmount, setBidAmount] = useState(1);
   const [selectedMembership, setSelectedMembership] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const membershipsRef = useMemoFirebase(() => (db && user ? collection(db, 'users', user.uid, 'saving_circle_memberships') : null), [db, user]);
   const { data: memberships, isLoading } = useCollection(membershipsRef);
+
+  const formatNumber = (num: number) => {
+    if (!mounted) return num.toString();
+    return num.toLocaleString();
+  };
 
   const handlePlaceBid = () => {
     if (!db || !user || !selectedMembership) return;
@@ -107,14 +117,14 @@ export default function MyCirclesPage() {
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Capital Integrado</span>
                         <div className="flex items-center gap-2 font-bold text-xl">
                           <Target className="h-5 w-5 text-primary" />
-                          ${membership.capitalPaid.toLocaleString()}
+                          ${formatNumber(membership.capitalPaid)}
                         </div>
                       </div>
                       <div className="space-y-1.5">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Saldo Pendiente</span>
                         <div className="flex items-center gap-2 font-bold text-xl text-primary">
                           <DollarSign className="h-5 w-5" />
-                          ${membership.outstandingCapitalBalance.toLocaleString()}
+                          ${formatNumber(membership.outstandingCapitalBalance)}
                         </div>
                       </div>
                       <div className="space-y-1.5">
@@ -163,7 +173,7 @@ export default function MyCirclesPage() {
                               </div>
                               <div className="bg-accent/30 p-4 rounded-xl flex justify-between items-center">
                                 <span className="text-sm font-medium text-muted-foreground">Monto Total Oferta (USD):</span>
-                                <span className="text-xl font-bold text-primary">${(bidAmount * 2083.33).toLocaleString()}</span>
+                                <span className="text-xl font-bold text-primary">${formatNumber(bidAmount * 2083.33)}</span>
                               </div>
                             </div>
                             <DialogFooter>

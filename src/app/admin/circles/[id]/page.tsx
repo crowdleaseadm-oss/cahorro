@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, query, orderBy, where, collectionGroup, limit } from 'firebase/firestore';
@@ -19,6 +19,11 @@ export default function CircleAdminDetail() {
   const params = useParams();
   const db = useFirestore();
   const [isDrawing, setIsDrawing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 1. Fetch Circle Data
   const circleRef = useMemoFirebase(() => (db && params.id ? doc(db, 'saving_circles', params.id as string) : null), [db, params.id]);
@@ -37,6 +42,11 @@ export default function CircleAdminDetail() {
     );
   }, [db, params.id]);
   const { data: members, isLoading: membersLoading } = useCollection(membersQuery);
+
+  const formatNumber = (num: number) => {
+    if (!mounted) return num.toString();
+    return num.toLocaleString();
+  };
 
   const handleAdjudicateBid = (bid: any) => {
     if (!db) return;
@@ -106,7 +116,7 @@ export default function CircleAdminDetail() {
       <div className="grid gap-6 md:grid-cols-4">
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Capital Suscripto</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold">${circle.targetCapital.toLocaleString()}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold">${formatNumber(circle.targetCapital)}</div></CardContent>
         </Card>
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-2"><CardTitle className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Alícuota Pura</CardTitle></CardHeader>
@@ -160,7 +170,7 @@ export default function CircleAdminDetail() {
                       <TableRow key={member.id}>
                         <TableCell className="font-mono text-[10px]">{member.id}</TableCell>
                         <TableCell className="text-xs">{new Date(member.joiningDate).toLocaleDateString()}</TableCell>
-                        <TableCell className="font-bold">${member.capitalPaid.toLocaleString()}</TableCell>
+                        <TableCell className="font-bold">${formatNumber(member.capitalPaid)}</TableCell>
                         <TableCell>
                           <Badge variant={member.adjudicationStatus === 'Adjudicated' ? "default" : "outline"} className={member.adjudicationStatus === 'Adjudicated' ? "bg-green-100 text-green-700 border-none" : ""}>
                             {member.adjudicationStatus === 'Adjudicated' ? 'Adjudicado' : 'Pendiente'}
@@ -214,7 +224,7 @@ export default function CircleAdminDetail() {
                             {bid.installmentsOffered} cuotas
                           </Badge>
                         </TableCell>
-                        <TableCell className="font-bold">${bid.amountInUsd.toLocaleString()}</TableCell>
+                        <TableCell className="font-bold">${formatNumber(bid.amountInUsd)}</TableCell>
                         <TableCell>
                           <Badge variant={bid.status === "Won" ? "default" : "secondary"}>
                             {bid.status === "Won" ? "Adjudicado" : "Pendiente"}
