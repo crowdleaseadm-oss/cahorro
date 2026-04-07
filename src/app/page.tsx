@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PiggyBank, Users, Calendar, Award, PartyPopper, Loader2, ArrowRight } from "lucide-react"
+import { PiggyBank, Users, Calendar, Award, PartyPopper, Loader2, ArrowRight, Clock } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Button } from "@/components/ui/button"
@@ -18,14 +18,6 @@ export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
   const [nextDueDate, setNextDueDate] = useState<string>('');
 
-  useEffect(() => {
-    setMounted(true);
-    // Calcular próximo vencimiento (ej: día 10 del próximo mes)
-    const now = new Date();
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 10);
-    setNextDueDate(nextMonth.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }));
-  }, []);
-
   // 1. Fetch User Memberships
   const membershipsRef = useMemoFirebase(() => 
     (db && user ? collection(db, 'users', user.uid, 'saving_circle_memberships') : null), 
@@ -34,6 +26,46 @@ export default function Dashboard() {
   const { data: memberships, isLoading: membershipsLoading } = useCollection(membershipsRef);
 
   const adjudicatedMemberships = (memberships || []).filter(m => m.adjudicationStatus === 'Adjudicated');
+
+  const calculateNextInstallmentDate = (joiningDateStr: string) => {
+    const joinDate = new Date(joiningDateStr);
+    // Regla: 1ra se paga al unirse. La 2da debe ser al menos 30 días después y caer un día 10.
+    const minDateForSecond = new Date(joinDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+    
+    let next10th = new Date(joinDate.getFullYear(), joinDate.getMonth(), 10);
+    
+    // Buscar el primer día 10 que sea posterior o igual a minDateForSecond
+    while (next10th < minDateForSecond) {
+      next10th.setMonth(next10th.getMonth() + 1);
+    }
+    
+    return next10th;
+  };
+
+  useEffect(() => {
+    setMounted(true);
+    
+    if (memberships && memberships.length > 0) {
+      const nextDates = memberships.map(m => calculateNextInstallmentDate(m.joiningDate));
+      const futureDates = nextDates.filter(d => d >= new Date());
+      
+      if (futureDates.length > 0) {
+        const earliest = new Date(Math.min(...futureDates.map(d => d.getTime())));
+        setNextDueDate(earliest.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }));
+      } else {
+        // Fallback genérico si no hay fechas futuras calculadas
+        const now = new Date();
+        const fallback = new Date(now.getFullYear(), now.getMonth() + 1, 10);
+        setNextDueDate(fallback.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }));
+      }
+    } else {
+      // Cálculo genérico para usuarios sin membresías aún
+      const now = new Date();
+      let genericNext = new Date(now.getFullYear(), now.getMonth(), 10);
+      if (genericNext < now) genericNext.setMonth(genericNext.getMonth() + 1);
+      setNextDueDate(genericNext.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }));
+    }
+  }, [memberships]);
 
   const formatCurrency = (val: number) => {
     if (!mounted) return `$0.00`;
@@ -68,7 +100,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Notificaciones de Adjudicación */}
       {adjudicatedMemberships.length > 0 && (
         <div className="space-y-4">
           {adjudicatedMemberships.map((m) => (
@@ -91,11 +122,11 @@ export default function Dashboard() {
         <Card className="border-none shadow-sm bg-primary text-primary-foreground">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80">Próximo Vencimiento</CardTitle>
-            <Calendar className="h-4 w-4 opacity-80" />
+            <Clock className="h-4 w-4 opacity-80" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{nextDueDate || 'Cargando...'}</div>
-            <p className="text-xs opacity-70 mt-1">Día de cobro administrativo</p>
+            <div className="text-2xl font-bold">{nextDueDate || 'Día 10 de cada mes'}</div>
+            <p className="text-xs opacity-70 mt-1">Cobro administrativo automático</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-white">
@@ -124,7 +155,7 @@ export default function Dashboard() {
         <Card className="md:col-span-4 border-none shadow-sm bg-white">
           <CardHeader>
             <CardTitle className="text-lg">Tus Planes de Ahorro</CardTitle>
-            <CardDescription>Seguimiento de capital y progreso de adjudicación.</CardDescription>
+            <CardDescription>Seguimiento de fechas de pago y adjudicación.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {!memberships || memberships.length === 0 ? (
@@ -136,6 +167,7 @@ export default function Dashboard() {
               memberships.map((membership) => {
                 const totalCapital = membership.capitalPaid + membership.outstandingCapitalBalance;
                 const progress = totalCapital > 0 ? (membership.capitalPaid / totalCapital) * 100 : 0;
+                const nextPayDate = calculateNextInstallmentDate(membership.joiningDate);
                 
                 return (
                   <div key={membership.id} className="group p-5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
@@ -158,8 +190,10 @@ export default function Dashboard() {
                     <div className="mt-5 flex items-center justify-between gap-4">
                       <div className="grid grid-cols-2 gap-6">
                         <div className="flex flex-col">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Saldo Pendiente</span>
-                          <span className="text-sm font-bold text-foreground">{formatCurrency(membership.outstandingCapitalBalance)}</span>
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Próximo Vencimiento</span>
+                          <span className="text-sm font-bold text-foreground">
+                            {nextPayDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                          </span>
                         </div>
                         <div className="flex flex-col">
                           <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Cuotas Pagas</span>

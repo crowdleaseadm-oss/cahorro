@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, Info, Loader2, DollarSign, Calendar, Lock, Unlock } from "lucide-react"
+import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, Info, Loader2, DollarSign, Calendar, Lock, Unlock, Clock } from "lucide-center"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -146,26 +147,23 @@ export default function CirclePlanPage() {
       savingCircleAdminUserId: circle.adminUserId,
       joiningDate: new Date().toISOString(),
       status: 'Active',
-      paidInstallmentsCount: 0,
-      capitalPaid: 0,
-      outstandingCapitalBalance: capitalTotal,
+      paidInstallmentsCount: 1, // Se abona la primera al suscribirse
+      capitalPaid: alicuotaPura,
+      outstandingCapitalBalance: capitalTotal - alicuotaPura,
       adjudicationStatus: 'Pending',
       createdAt: serverTimestamp(),
     };
 
-    // 1. Guardar en el perfil del usuario (para "Mis Círculos")
     const userMembershipRef = doc(collection(db, 'users', user.uid, 'saving_circle_memberships'));
     setDocumentNonBlocking(userMembershipRef, { ...membershipData, id: userMembershipRef.id }, { merge: true });
     
-    // 2. Guardar en la subcolección del círculo (para "Admin View" - Evita collectionGroup)
     const circleMemberRef = doc(db, 'saving_circles', circle.id, 'members', user.uid);
     setDocumentNonBlocking(circleMemberRef, { ...membershipData, id: userMembershipRef.id }, { merge: true });
 
-    // 3. Incrementar contador del círculo
     const circleDocRef = doc(db, 'saving_circles', circle.id);
     updateDocumentNonBlocking(circleDocRef, { currentMemberCount: increment(1) });
 
-    toast({ title: "¡Suscripción exitosa!", description: "Bienvenido al círculo de ahorro." });
+    toast({ title: "¡Suscripción exitosa!", description: "Has abonado la 1ra cuota correctamente." });
     
     setTimeout(() => {
       router.push('/my-circles');
@@ -233,10 +231,10 @@ export default function CirclePlanPage() {
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Adjudicaciones</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Vencimientos</span>
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" />
-                    <span className="text-xl font-bold">{circle.drawMethodCount} + {circle.bidMethodCount}</span>
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span className="text-xl font-bold">Día 10</span>
                   </div>
                 </div>
               </div>
@@ -249,7 +247,7 @@ export default function CirclePlanPage() {
                       Costo Financiero Total (CFT)
                     </div>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      Cálculo basado en Gasto Administrativo ({(adminRate * 100).toFixed(1)}% alícuota), Seguro de Vida decreciente ({(lifeInsRate * 100).toFixed(2)}% sobre saldo puro) y Derecho de Suscripción ({(subRate * 100).toFixed(1)}%) prorrateado.
+                      La 1ra cuota se abona al suscribirse. La 2da cuota vence el día 10 posterior a los 30 días de suscripción.
                     </p>
                   </div>
                   <div className="text-center md:text-right">
@@ -353,13 +351,17 @@ export default function CirclePlanPage() {
             <CardContent className="space-y-6">
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-sm p-3 rounded-xl bg-white/10">
-                  <span className="font-medium">Cuota Inicial</span>
+                  <span className="font-medium">Abono Inicial (1ra Cuota)</span>
                   <span className="font-bold text-lg">{formatCurrency(installments[0].currentTotal)}</span>
                 </div>
                 <div className="flex justify-between items-center text-sm p-3 rounded-xl bg-white/10">
-                  <span className="font-medium">Capital Final</span>
+                  <span className="font-medium">Capital a Adjudicar</span>
                   <span className="font-bold text-lg">{formatCurrency(capitalTotal)}</span>
                 </div>
+              </div>
+
+              <div className="bg-white/10 p-4 rounded-xl text-[10px] leading-relaxed text-white/80">
+                <p><strong>Nota:</strong> Al suscribirse se abona la primera cuota. Las cuotas subsiguientes vencen los días 10 de cada mes, siempre que hayan transcurrido al menos 30 días desde la suscripción.</p>
               </div>
 
               <Button 
@@ -373,7 +375,7 @@ export default function CirclePlanPage() {
                 ) : (circle.currentMemberCount || 0) >= circle.memberCapacity ? (
                   'Círculo Completo'
                 ) : (
-                  'Unirme al Círculo'
+                  'Abonar 1ra Cuota y Unirme'
                 )}
               </Button>
             </CardContent>
