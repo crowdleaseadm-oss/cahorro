@@ -1,4 +1,3 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -9,21 +8,22 @@ service cloud.firestore {
     }
 
     // REGLAS PARA CONSULTAS DE GRUPO (Collection Group)
-    // Estas reglas DEBEN estar en la raíz para permitir consultas globales
-    match /{allPaths=**}/saving_circle_memberships/{membershipId} {
+    // Se definen con {path=**} para que coincidan en cualquier profundidad.
+    match /{path=**}/saving_circle_memberships/{membershipId} {
       allow read, write: if isSignedIn();
     }
 
-    match /{allPaths=**}/bids/{bidId} {
+    match /{path=**}/bids/{bidId} {
       allow read, write: if isSignedIn();
     }
 
     // Perfiles de Usuario
     match /users/{userId} {
-      allow get, list: if isSignedIn();
+      allow read: if isSignedIn();
       allow create, update: if isSignedIn() && request.auth.uid == userId;
       allow delete: if false;
 
+      // Regla local para acceso directo
       match /saving_circle_memberships/{membershipId} {
         allow read, write: if isSignedIn();
       }

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -34,7 +33,8 @@ export interface InternalQuery extends Query<DocumentData> {
     path?: {
       canonicalString(): string;
       toString(): string;
-    }
+    };
+    collectionGroup?: string;
   }
 }
 
@@ -81,8 +81,12 @@ export function useCollection<T = any>(
            const internalQuery = memoizedTargetRefOrQuery as unknown as InternalQuery;
            if (memoizedTargetRefOrQuery.type === 'collection') {
              path = (memoizedTargetRefOrQuery as CollectionReference).path;
+           } else if (internalQuery._query?.collectionGroup) {
+             // For collection group queries, use the collection name as the path context
+             path = internalQuery._query.collectionGroup;
            } else if (internalQuery._query?.path) {
-             path = internalQuery._query.path.canonicalString();
+             const canon = internalQuery._query.path.canonicalString();
+             path = canon || 'root';
            } else {
              path = 'collectionGroupQuery';
            }
