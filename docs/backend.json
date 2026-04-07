@@ -33,10 +33,11 @@
         "drawMethodCount": { "type": "number", "description": "1-5 adjudicaciones por sorteo." },
         "bidMethodCount": { "type": "number", "description": "1-5 adjudicaciones por licitacion." },
         "memberCapacity": { "type": "number" },
+        "currentMemberCount": { "type": "number", "default": 0 },
         "status": { "type": "string", "enum": ["Active", "Completed", "Cancelled"] },
         "creationDate": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "name", "adminUserId", "targetCapital", "totalInstallments", "installmentValue", "subscriptionFeeRate", "administrativeFeeRate", "lifeInsuranceRate", "drawMethodCount", "bidMethodCount", "memberCapacity", "status", "creationDate"]
+      "required": ["id", "name", "adminUserId", "targetCapital", "totalInstallments", "installmentValue", "subscriptionFeeRate", "administrativeFeeRate", "lifeInsuranceRate", "drawMethodCount", "bidMethodCount", "memberCapacity", "currentMemberCount", "status", "creationDate"]
     },
     "SavingCircleMembership": {
       "$schema": "http://json-schema.org/draft-07/schema#",

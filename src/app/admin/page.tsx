@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -53,6 +54,7 @@ export default function AdminPage() {
       installmentValue: calculations.alicuota,
       lifeInsuranceRate: 0.0009,
       memberCapacity: calculations.capacity,
+      currentMemberCount: 0,
       status: 'Active',
       creationDate: new Date().toISOString(),
       createdAt: serverTimestamp(),
@@ -63,7 +65,6 @@ export default function AdminPage() {
     setIsDialogOpen(false);
   };
 
-  // Generate options
   const installmentOptions = Array.from({ length: 10 }, (_, i) => (i + 1) * 12);
   const countOptions = Array.from({ length: 6 }, (_, i) => i);
 
@@ -230,49 +231,59 @@ export default function AdminPage() {
                 <TableHead>Cap. Suscripto</TableHead>
                 <TableHead>Cuotas</TableHead>
                 <TableHead>Alícuota Pura</TableHead>
-                <TableHead>Capacidad</TableHead>
-                <TableHead>Estado</TableHead>
+                <TableHead>Estado Llenado</TableHead>
+                <TableHead>Estado Admin</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {circlesLoading ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-4">Cargando círculos...</TableCell></TableRow>
-              ) : circlesList?.map((circle) => (
-                <TableRow key={circle.id}>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-bold">{circle.name}</span>
-                      <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{circle.id}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="font-medium">${circle.targetCapital.toLocaleString()} USD</TableCell>
-                  <TableCell>{circle.totalInstallments}</TableCell>
-                  <TableCell className="text-primary font-bold">${(circle.targetCapital / circle.totalInstallments).toFixed(2)}</TableCell>
-                  <TableCell>{circle.memberCapacity}</TableCell>
-                  <TableCell>
-                    <Badge variant={circle.status === "Active" ? "default" : "secondary"}>
-                      {circle.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={`/admin/circles/${circle.id}`}>Gestionar Miembros</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>Editar Tasas</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive font-bold">Suspender</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+              ) : circlesList?.map((circle) => {
+                const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
+                return (
+                  <TableRow key={circle.id}>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-bold">{circle.name}</span>
+                        <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{circle.id}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">${circle.targetCapital.toLocaleString()} USD</TableCell>
+                    <TableCell>{circle.totalInstallments}</TableCell>
+                    <TableCell className="text-primary font-bold">${(circle.targetCapital / circle.totalInstallments).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={isFull ? "secondary" : "default"} className={isFull ? "bg-orange-100 text-orange-700" : "bg-green-100 text-green-700"}>
+                          {isFull ? "ACTIVO (Lleno)" : "ABIERTO"}
+                        </Badge>
+                        <span className="text-[10px] text-center">{circle.currentMemberCount || 0} / {circle.memberCapacity}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {circle.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={`/admin/circles/${circle.id}`}>Gestionar Miembros</Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>Editar Tasas</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive font-bold">Suspender</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, CheckCircle2, Info, Loader2, DollarSign } from "lucide-react"
+import { ArrowLeft, Calculator, ShieldCheck, TrendingUp, Users, CheckCircle2, Info, Loader2, DollarSign, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -11,8 +11,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc, collection, serverTimestamp } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, collection, serverTimestamp, increment } from 'firebase/firestore';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { toast } from '@/hooks/use-toast';
 
 export default function CirclePlanPage() {
@@ -46,14 +46,15 @@ export default function CirclePlanPage() {
   );
 
   const alicuota = circle.targetCapital / circle.totalInstallments;
-  const subFee = alicuota * (circle.subscriptionFeeRate || 0);
-  const adminFee = alicuota * (circle.administrativeFeeRate || 0);
+  const subFee = alicuota * (circle.subscriptionFeeRate || 0.03);
+  const adminFee = alicuota * (circle.administrativeFeeRate || 0.02);
   const insurance = circle.targetCapital * 0.0009;
   const totalMonthly = alicuota + subFee + adminFee + insurance;
   
-  // CFT = ((Total Pagado - Capital) / Capital) * 100
   const totalPaidEstimate = totalMonthly * circle.totalInstallments;
   const cftAverage = ((totalPaidEstimate - circle.targetCapital) / circle.targetCapital) * 100;
+
+  const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
 
   const handleSubscribe = () => {
     if (!user) {
@@ -61,6 +62,10 @@ export default function CirclePlanPage() {
       return;
     }
     if (!db) return;
+    if (isFull) {
+      toast({ title: "Círculo Completo", description: "Este grupo ya ha alcanzado su capacidad máxima.", variant: "destructive" });
+      return;
+    }
     
     setIsSubscribing(true);
 
@@ -81,6 +86,10 @@ export default function CirclePlanPage() {
     const membershipsCol = collection(db, 'users', user.uid, 'saving_circle_memberships');
     addDocumentNonBlocking(membershipsCol, membershipData);
     
+    // Incrementar contador en el círculo
+    const circleDocRef = doc(db, 'saving_circles', circle.id);
+    updateDocumentNonBlocking(circleDocRef, { currentMemberCount: increment(1) });
+
     toast({ title: "¡Suscripción exitosa!", description: "Bienvenido al círculo de ahorro." });
     
     setTimeout(() => {
@@ -108,15 +117,15 @@ export default function CirclePlanPage() {
         {/* Main Info */}
         <div className="lg:col-span-2 space-y-8">
           <Card className="border-none shadow-sm bg-white overflow-hidden">
-            <div className="h-2 bg-primary w-full" />
+            <div className={`h-2 w-full ${isFull ? 'bg-orange-500' : 'bg-primary'}`} />
             <CardHeader>
               <div className="flex justify-between items-start">
                 <div>
                   <CardTitle className="text-3xl font-bold text-primary">{circle.name}</CardTitle>
                   <CardDescription className="text-lg">Capital Suscripto: {formatCurrency(circle.targetCapital)} USD</CardDescription>
                 </div>
-                <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-none font-bold px-4 py-1">
-                  Activo
+                <Badge className={`${isFull ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'} border-none font-bold px-4 py-1`}>
+                  {isFull ? 'ACTIVO (Completo)' : 'ABIERTO'}
                 </Badge>
               </div>
             </CardHeader>
@@ -126,7 +135,7 @@ export default function CirclePlanPage() {
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Miembros</span>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-primary" />
-                    <span className="text-xl font-bold">1/{circle.memberCapacity}</span>
+                    <span className="text-xl font-bold">{circle.currentMemberCount || 0}/{circle.memberCapacity}</span>
                   </div>
                 </div>
                 <div className="space-y-1">
@@ -272,10 +281,12 @@ export default function CirclePlanPage() {
                 variant="secondary" 
                 className="w-full h-14 text-lg font-bold shadow-lg hover:scale-[1.02] transition-transform"
                 onClick={handleSubscribe}
-                disabled={isSubscribing}
+                disabled={isSubscribing || isFull}
               >
                 {isSubscribing ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
+                ) : isFull ? (
+                  'Círculo Completo'
                 ) : (
                   'Suscribirme Ahora'
                 )}

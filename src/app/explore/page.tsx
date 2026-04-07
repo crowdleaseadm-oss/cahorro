@@ -70,18 +70,19 @@ export default function ExplorePage() {
             const adminFee = alicuota * (circle.administrativeFeeRate || 0);
             const insurance = circle.targetCapital * 0.0009;
             const totalFee = alicuota + subFee + adminFee + insurance;
+            const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
 
             return (
               <Card key={circle.id} className="group flex flex-col h-full border-none shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden bg-white">
-                <div className="h-2 bg-primary w-full" />
+                <div className={`h-2 w-full ${isFull ? 'bg-orange-500' : 'bg-primary'}`} />
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start mb-2">
-                    <Badge className="bg-secondary/30 text-primary hover:bg-secondary/50 border-none font-bold">
-                      USD Inversión
+                    <Badge variant={isFull ? "secondary" : "default"} className={`border-none font-bold px-3 ${isFull ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
+                      {isFull ? 'ACTIVO (Completo)' : 'ABIERTO'}
                     </Badge>
                     <div className="flex items-center text-xs text-muted-foreground font-medium">
                       <Users className="h-3 w-3 mr-1" />
-                      Capacidad: {circle.memberCapacity}
+                      {circle.currentMemberCount || 0}/{circle.memberCapacity}
                     </div>
                   </div>
                   <CardTitle className="text-xl group-hover:text-primary transition-colors leading-tight">
@@ -126,7 +127,7 @@ export default function ExplorePage() {
                   </div>
                 </CardContent>
                 <CardFooter className="pt-2">
-                  <Button asChild className="w-full group/btn shadow-md hover:shadow-primary/20">
+                  <Button asChild className="w-full group/btn shadow-md hover:shadow-primary/20" disabled={isFull && !isFull}>
                     <Link href={`/explore/${circle.id}`} className="flex items-center justify-center">
                       Ver Plan Financiero
                       <ChevronRight className="ml-1 h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
