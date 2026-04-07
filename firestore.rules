@@ -38,13 +38,6 @@ service cloud.firestore {
         allow create: if isOwner(userId) && isValidUserRef(userId);
         allow update: if (isExistingOwner(userId) || isCircleAdmin(resource.data.savingCircleAdminUserId) || isGlobalAdmin()) && (request.resource.data.userId == resource.data.userId);
         allow delete: if isExistingOwner(userId) || isCircleAdmin(resource.data.savingCircleAdminUserId) || isGlobalAdmin();
-
-        match /payments/{paymentId} {
-          allow get, list: if isOwner(userId) || isCircleAdmin(resource.data.savingCircleAdminUserId) || isGlobalAdmin();
-          allow create: if isOwner(userId) || isCircleAdmin(request.resource.data.savingCircleAdminUserId) || isGlobalAdmin();
-          allow update: if (isExistingOwner(userId) || isCircleAdmin(resource.data.savingCircleAdminUserId) || isGlobalAdmin());
-          allow delete: if isGlobalAdmin();
-        }
       }
     }
 
@@ -55,10 +48,19 @@ service cloud.firestore {
     }
 
     match /saving_circles/{savingCircleId} {
-      allow get, list: if isSignedIn();
+      // Permitir exploración pública para que visitantes vean los planes
+      allow get, list: if true;
       allow create: if isGlobalAdmin();
-      allow update: if (isCircleAdmin(resource.data.adminUserId) || isGlobalAdmin()) && (request.resource.data.adminUserId == resource.data.adminUserId);
+      allow update: if (isCircleAdmin(resource.data.adminUserId) || isGlobalAdmin());
       allow delete: if isGlobalAdmin();
+
+      match /bids/{bidId} {
+        // Los socios pueden ver las ofertas de su círculo; solo el dueño crea, y el admin actualiza (adjudica)
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn() && isValidUserRef(request.auth.uid);
+        allow update: if isCircleAdmin(get(/databases/$(database)/documents/saving_circles/$(savingCircleId)).data.adminUserId) || isGlobalAdmin();
+        allow delete: if isGlobalAdmin();
+      }
 
       match /adjudication_events/{eventId} {
         allow get, list: if isSignedIn();
