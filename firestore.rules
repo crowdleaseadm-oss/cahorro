@@ -28,6 +28,11 @@ service cloud.firestore {
       return request.resource.data.userId == userId;
     }
 
+    // Regla para consultas de Collection Group (necesaria para la administración de miembros)
+    match /{path=**}/saving_circle_memberships/{membershipId} {
+      allow list: if isGlobalAdmin();
+    }
+
     match /users/{userId} {
       allow get: if isOwner(userId) || isGlobalAdmin();
       allow list: if isOwner(userId) || isGlobalAdmin();
