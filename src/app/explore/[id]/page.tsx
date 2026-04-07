@@ -46,34 +46,36 @@ export default function CirclePlanPage() {
     </div>
   );
 
-  // --- LÓGICA FINANCIERA ACTUALIZADA ---
+  // --- INGENIERÍA FINANCIERA ACTUALIZADA ---
   const capitalTotal = circle.targetCapital;
   const totalCuotas = circle.totalInstallments;
+  
+  // 1. Alícuota Pura
   const alicuotaPura = capitalTotal / totalCuotas;
   
-  // 1. Gasto Administrativo: 10% de la alícuota pura
+  // 2. Gasto Administrativo: 10% de la alícuota pura
   const adminFeeMensual = alicuotaPura * 0.10;
   
-  // 2. Derecho de Suscripción: 3% del capital total, prorrateado en el primer 20% de cuotas
+  // 3. Derecho de Suscripción: 3% del capital total, prorrateado en el primer 20% de cuotas
   const totalSubFee = capitalTotal * 0.03;
   const installmentsWithSubFee = Math.ceil(totalCuotas * 0.20);
   const proratedSubFee = totalSubFee / installmentsWithSubFee;
 
   const insuranceRate = 0.0009; // 0.09%
 
-  // Generar datos de las cuotas con seguro de vida decreciente
+  // Generar datos de las cuotas con cálculos exactos
   const installments = Array.from({ length: totalCuotas }, (_, i) => {
     const num = i + 1;
     
-    // El capital pagado acumulado hasta la cuota anterior
-    const capitalPagadoAcumulado = alicuotaPura * i;
-    // Saldo de capital pendiente para esta cuota (antes de pagar la alícuota de este mes)
-    const saldoPendiente = capitalTotal - (alicuotaPura * i);
+    // Saldo de capital puro para el cálculo del seguro: (Capital Suscripto - Total de Alícuotas Pagas)
+    // Para la cuota #1 (i=0), no se han pagado alícuotas aún.
+    const totalAlicuotasPagas = alicuotaPura * i;
+    const saldoCapitalPuro = capitalTotal - totalAlicuotasPagas;
     
-    // 3. Seguro de Vida: 0.09% sobre el saldo de capital pendiente
-    const currentInsurance = saldoPendiente * insuranceRate;
+    // Seguro de Vida: 0.09% sobre el saldo de capital puro
+    const currentInsurance = saldoCapitalPuro * insuranceRate;
     
-    // Aplicar suscripción solo si está dentro del primer 20%
+    // Derecho de suscripción: solo en el primer 20% de las cuotas
     const currentSubFee = num <= installmentsWithSubFee ? proratedSubFee : 0;
     
     const currentTotal = alicuotaPura + adminFeeMensual + currentInsurance + currentSubFee;
@@ -85,7 +87,7 @@ export default function CirclePlanPage() {
       currentInsurance,
       currentSubFee, 
       currentTotal,
-      saldoPendiente
+      saldoCapitalPuro
     };
   });
 
@@ -204,12 +206,12 @@ export default function CirclePlanPage() {
                       Costo Financiero Total (CFT)
                     </div>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      El Derecho de Suscripción (3%) se prorratea en las primeras {installmentsWithSubFee} cuotas. El Seguro de Vida (0.09%) disminuye con el saldo de capital.
+                      Cálculo basado en Gasto Administrativo (10% alícuota), Seguro de Vida decreciente (0.09% sobre saldo) y Derecho de Suscripción (3%) prorrateado.
                     </p>
                   </div>
                   <div className="text-center md:text-right">
                     <div className="text-4xl font-black text-primary">{cftAverage.toFixed(2)}%</div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total del Plan</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Costo Total del Plan</span>
                   </div>
                 </div>
               </div>
@@ -219,7 +221,7 @@ export default function CirclePlanPage() {
           <Card className="border-none shadow-sm bg-white overflow-hidden">
             <CardHeader>
               <CardTitle className="text-xl font-bold">Proyección de {totalCuotas} Cuotas</CardTitle>
-              <CardDescription>Planificación detallada de aportes mensuales en USD.</CardDescription>
+              <CardDescription>Seguro de vida decreciente según saldo de capital puro.</CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[600px] w-full pr-4">
@@ -227,16 +229,16 @@ export default function CirclePlanPage() {
                   <TableHeader className="bg-muted/50 sticky top-0 z-10">
                     <TableRow>
                       <TableHead className="font-bold">Cuota</TableHead>
-                      <TableHead className="font-bold">Saldo Capital</TableHead>
+                      <TableHead className="font-bold">Saldo Capital Puro</TableHead>
                       <TableHead className="font-bold">Total Mensual</TableHead>
-                      <TableHead className="font-bold text-right">Acción</TableHead>
+                      <TableHead className="font-bold text-right">Detalle</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {installments.map((inst) => (
                       <TableRow key={inst.num} className="hover:bg-accent/10 transition-colors">
                         <TableCell className="font-bold">#{inst.num}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">{formatCurrency(inst.saldoPendiente + alicuotaPura)}</TableCell>
+                        <TableCell className="text-muted-foreground text-xs">{formatCurrency(inst.saldoCapitalPuro)}</TableCell>
                         <TableCell className="font-bold text-primary">{formatCurrency(inst.currentTotal)}</TableCell>
                         <TableCell className="text-right">
                           <Dialog>
@@ -249,7 +251,7 @@ export default function CirclePlanPage() {
                             <DialogContent className="max-w-md">
                               <DialogHeader>
                                 <DialogTitle className="text-primary">Desglose de Cuota #{inst.num}</DialogTitle>
-                                <DialogDescription>Composición detallada del aporte mensual.</DialogDescription>
+                                <DialogDescription>Componentes calculados en USD.</DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4 py-4">
                                 <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
@@ -266,7 +268,7 @@ export default function CirclePlanPage() {
                                 <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
                                   <div className="flex flex-col">
                                     <span className="text-sm font-medium">Seguro de Vida</span>
-                                    <span className="text-[10px] text-muted-foreground">0.09% sobre saldo ${ (inst.saldoPendiente + alicuotaPura).toLocaleString() }</span>
+                                    <span className="text-[10px] text-muted-foreground">0.09% sobre saldo puro { formatCurrency(inst.saldoCapitalPuro) }</span>
                                   </div>
                                   <span className="font-bold">{formatCurrency(inst.currentInsurance)}</span>
                                 </div>
@@ -274,13 +276,13 @@ export default function CirclePlanPage() {
                                   <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/20">
                                     <div className="flex flex-col">
                                       <span className="text-sm font-bold text-primary">Derecho de Suscripción</span>
-                                      <span className="text-[10px] text-primary/70">Prorrateo cuota {inst.num} de {installmentsWithSubFee}</span>
+                                      <span className="text-[10px] text-primary/70">Prorrateo {inst.num} de {installmentsWithSubFee} cuotas</span>
                                     </div>
                                     <span className="font-bold text-primary">{formatCurrency(inst.currentSubFee)}</span>
                                   </div>
                                 )}
                                 <div className="border-t pt-4 flex justify-between items-center">
-                                  <span className="text-lg font-bold">Total a Pagar</span>
+                                  <span className="text-lg font-bold">Total Mensual</span>
                                   <span className="text-2xl font-black text-primary">{formatCurrency(inst.currentTotal)}</span>
                                 </div>
                               </div>
@@ -301,9 +303,9 @@ export default function CirclePlanPage() {
             <CardHeader className="pb-4">
               <CardTitle className="text-xl font-bold flex items-center gap-2">
                 <ShieldCheck className="h-6 w-6" />
-                Suscripción USD
+                Suscripción en USD
               </CardTitle>
-              <CardDescription className="text-white/80">Ahorro colaborativo sin intereses bancarios.</CardDescription>
+              <CardDescription className="text-white/80">Capital garantizado sin intereses bancarios.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
@@ -318,16 +320,16 @@ export default function CirclePlanPage() {
               </div>
 
               <div className="space-y-4">
-                 <h4 className="text-xs font-bold uppercase tracking-widest opacity-70">Conceptos del Plan:</h4>
+                 <h4 className="text-xs font-bold uppercase tracking-widest opacity-70">Resumen del Plan:</h4>
                  <div className="bg-white/10 p-4 rounded-xl space-y-3">
                     <p className="text-[10px] leading-relaxed">
-                      • <strong>Administrativo:</strong> US$ {adminFeeMensual.toFixed(2)} mensuales (10% alícuota).
+                      • <strong>Administrativo:</strong> 10% de la alícuota puro (US$ {adminFeeMensual.toFixed(2)}).
                     </p>
                     <p className="text-[10px] leading-relaxed">
-                      • <strong>Seguro:</strong> Variable (0.09% del saldo pendiente). Disminuye mes a mes.
+                      • <strong>Seguro Vida:</strong> 0.09% sobre el saldo de capital puro. Disminuye con cada pago.
                     </p>
                     <p className="text-[10px] leading-relaxed">
-                      • <strong>Suscripción:</strong> Prorrateado en las primeras {installmentsWithSubFee} cuotas.
+                      • <strong>Suscripción:</strong> 3% del capital, prorrateado en los primeros {installmentsWithSubFee} meses.
                     </p>
                  </div>
               </div>
@@ -343,10 +345,10 @@ export default function CirclePlanPage() {
                 ) : isFull ? (
                   'Círculo Completo'
                 ) : (
-                  'Suscribirme Ahora'
+                  'Unirme al Círculo'
                 )}
               </Button>
-              <p className="text-[10px] text-center text-white/60">Al suscribirse acepta los términos y condiciones del círculo.</p>
+              <p className="text-[10px] text-center text-white/60">Operación sujeta a aprobación de contrato legal.</p>
             </CardContent>
           </Card>
         </div>

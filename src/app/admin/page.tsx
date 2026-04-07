@@ -45,11 +45,14 @@ export default function AdminPage() {
 
   const calculations = useMemo(() => {
     const alicuota = formData.targetCapital / formData.totalInstallments;
-    // Gasto admin: 10% de la alícuota
+    
+    // 1. Gasto admin: 10% de la alícuota
     const adminFee = alicuota * 0.10;
-    // Seguro de vida inicial: 0.09% del capital total
+    
+    // 2. Seguro de vida inicial: 0.09% del capital puro total (saldo inicial)
     const lifeInsuranceInicial = formData.targetCapital * 0.0009;
-    // Suscripción: 3% prorrateado en el primer 20%
+    
+    // 3. Suscripción: 3% prorrateado en el primer 20%
     const totalSubFee = formData.targetCapital * 0.03;
     const cuotasSuscripcion = Math.ceil(formData.totalInstallments * 0.20);
     const subFeeMensual = totalSubFee / cuotasSuscripcion;
@@ -57,7 +60,7 @@ export default function AdminPage() {
     const totalCuotaInicial = alicuota + adminFee + lifeInsuranceInicial + subFeeMensual;
     const capacity = formData.totalInstallments * (formData.drawMethodCount + formData.bidMethodCount);
     
-    return { alicuota, adminFee, totalCuotaInicial, capacity, lifeInsuranceInicial };
+    return { alicuota, adminFee, totalCuotaInicial, capacity, lifeInsuranceInicial, subFeeMensual };
   }, [formData]);
 
   const handleCreateCircle = () => {
@@ -133,7 +136,7 @@ export default function AdminPage() {
 
                 <div className="grid grid-cols-2 gap-4 border-t pt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="installments">Cuotas</Label>
+                    <Label htmlFor="installments">Plazo (Meses)</Label>
                     <Select 
                       value={formData.totalInstallments.toString()} 
                       onValueChange={(val) => setFormData({...formData, totalInstallments: Number(val)})}
@@ -194,24 +197,28 @@ export default function AdminPage() {
                 <div className="bg-accent/30 p-4 rounded-xl space-y-3">
                   <div className="flex items-center gap-2 font-bold text-sm text-primary mb-1">
                     <Calculator className="h-4 w-4" />
-                    Previsualización Financiera (Cuota 1)
+                    Proyección Cuota #1
                   </div>
-                  <div className="grid grid-cols-3 gap-4 text-[10px]">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[10px]">
                     <div>
-                      <span className="text-muted-foreground block">Alícuota</span>
+                      <span className="text-muted-foreground block uppercase">Alícuota</span>
                       <span className="font-bold text-foreground">${calculations.alicuota.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block">Admin (10%)</span>
+                      <span className="text-muted-foreground block uppercase">Admin (10%)</span>
                       <span className="font-bold text-foreground">${calculations.adminFee.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block">Total Inicial</span>
-                      <span className="font-bold text-primary text-sm">${calculations.totalCuotaInicial.toFixed(2)}</span>
+                      <span className="text-muted-foreground block uppercase">Seguro (0.09%)</span>
+                      <span className="font-bold text-foreground">${calculations.lifeInsuranceInicial.toFixed(2)}</span>
+                    </div>
+                    <div className="bg-primary/10 p-1 rounded">
+                      <span className="text-primary block uppercase font-bold">Total Inicial</span>
+                      <span className="font-black text-primary text-sm">${calculations.totalCuotaInicial.toFixed(2)}</span>
                     </div>
                   </div>
                   <p className="text-[9px] text-muted-foreground italic mt-1">
-                    * El seguro de vida disminuirá mensualmente con el saldo de capital.
+                    * El seguro de vida se recalcula mensualmente sobre el saldo de capital puro pendiente.
                   </p>
                 </div>
               </div>
@@ -229,8 +236,8 @@ export default function AdminPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">Configuración de Círculos</CardTitle>
-              <CardDescription>Gestione la capacidad y parámetros financieros.</CardDescription>
+              <CardTitle className="text-lg">Círculos Configurados</CardTitle>
+              <CardDescription>Supervisión financiera y estado de grupos.</CardDescription>
             </div>
             <div className="relative w-64">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
