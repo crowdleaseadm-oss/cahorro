@@ -67,6 +67,7 @@ export default function HowItWorks() {
             "Sin tasas de interés abusivas",
             "Disciplina de ahorro forzada",
             "Acceso anticipado a capital",
+            "Capital de libre destino",
             "Comunidad de apoyo mutuo",
             "Flexibilidad en montos",
             "Gestión 100% digital"
