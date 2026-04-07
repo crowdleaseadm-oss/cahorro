@@ -14,8 +14,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { useFirestore, useCollection, useMemoFirebase, useUser, useAuth } from '@/firebase';
-import { collection, serverTimestamp } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, serverTimestamp, doc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import Link from 'next/link';
 import { toast } from '@/hooks/use-toast';
@@ -62,6 +62,16 @@ export default function AdminPage() {
     return { alicuota, adminFee, totalCuotaInicial, capacity, lifeInsuranceInicial, subFeeMensual };
   }, [formData]);
 
+  const generateCustomId = () => {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const nums = "0123456789";
+    let l = "";
+    for (let i = 0; i < 4; i++) l += letters[Math.floor(Math.random() * letters.length)];
+    let n = "";
+    for (let i = 0; i < 4; i++) n += nums[Math.floor(Math.random() * nums.length)];
+    return l + n;
+  };
+
   const handleCreateCircle = () => {
     if (!db || !user) return;
     if (formData.isPrivate && !formData.password) {
@@ -69,8 +79,10 @@ export default function AdminPage() {
       return;
     }
     
+    const customId = generateCustomId();
     const newCircle = {
       ...formData,
+      id: customId,
       installmentValue: calculations.alicuota,
       memberCapacity: calculations.capacity,
       currentMemberCount: 0,
@@ -80,9 +92,11 @@ export default function AdminPage() {
       adminUserId: user.uid,
     };
 
-    addDocumentNonBlocking(collection(db, 'saving_circles'), newCircle);
+    const circleRef = doc(db, 'saving_circles', customId);
+    setDocumentNonBlocking(circleRef, newCircle, { merge: true });
+    
     setIsDialogOpen(false);
-    toast({ title: "Círculo Creado", description: `El círculo ${formData.name} se ha configurado exitosamente.` });
+    toast({ title: "Círculo Creado", description: `El círculo ${customId} se ha configurado exitosamente.` });
   };
 
   const installmentOptions = Array.from({ length: 10 }, (_, i) => (i + 1) * 12);
@@ -141,34 +155,34 @@ export default function AdminPage() {
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 font-bold text-sm text-primary">
                       <Settings2 className="h-4 w-4" />
-                      Editor de Tasas
+                      Editor de Tasas (%)
                     </div>
                     <div className="grid gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-xs">Gasto Administrativo (% de alícuota)</Label>
                         <Input 
                           type="number" 
-                          step="0.01" 
-                          value={formData.administrativeFeeRate}
-                          onChange={(e) => setFormData({...formData, administrativeFeeRate: Number(e.target.value)})}
+                          step="0.1" 
+                          value={formData.administrativeFeeRate * 100}
+                          onChange={(e) => setFormData({...formData, administrativeFeeRate: Number(e.target.value) / 100})}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Suscripción (% de capital total)</Label>
                         <Input 
                           type="number" 
-                          step="0.01" 
-                          value={formData.subscriptionFeeRate}
-                          onChange={(e) => setFormData({...formData, subscriptionFeeRate: Number(e.target.value)})}
+                          step="0.1" 
+                          value={formData.subscriptionFeeRate * 100}
+                          onChange={(e) => setFormData({...formData, subscriptionFeeRate: Number(e.target.value) / 100})}
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Seguro de Vida (% sobre saldo)</Label>
                         <Input 
                           type="number" 
-                          step="0.0001" 
-                          value={formData.lifeInsuranceRate}
-                          onChange={(e) => setFormData({...formData, lifeInsuranceRate: Number(e.target.value)})}
+                          step="0.001" 
+                          value={formData.lifeInsuranceRate * 100}
+                          onChange={(e) => setFormData({...formData, lifeInsuranceRate: Number(e.target.value) / 100})}
                         />
                       </div>
                     </div>
@@ -317,7 +331,7 @@ export default function AdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nombre / ID</TableHead>
+                <TableHead>ID / Nombre</TableHead>
                 <TableHead>Privacidad</TableHead>
                 <TableHead>Cap. Suscripto</TableHead>
                 <TableHead>Cuotas</TableHead>
@@ -335,8 +349,8 @@ export default function AdminPage() {
                   <TableRow key={circle.id}>
                     <TableCell>
                       <div className="flex flex-col">
-                        <span className="font-bold">{circle.name}</span>
-                        <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{circle.id}</span>
+                        <span className="font-mono text-xs font-bold text-primary">{circle.id}</span>
+                        <span className="font-medium text-sm">{circle.name}</span>
                       </div>
                     </TableCell>
                     <TableCell>

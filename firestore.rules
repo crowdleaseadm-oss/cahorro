@@ -3,10 +3,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 1. REGLAS PRIORITARIAS PARA CONSULTAS GLOBALES (Collection Group)
-    // Se otorga acceso de lectura a cualquier usuario autenticado para que el administrador
-    // pueda listar socios y licitaciones de todos los usuarios en una sola consulta.
-    
+    // REGLAS PARA CONSULTAS DE GRUPO (Collection Group)
+    // Deben estar fuera de los bloques de ruta específicos para ser detectadas globalmente.
     match /{path=**}/saving_circle_memberships/{membershipId} {
       allow read, write: if request.auth != null;
     }
@@ -15,15 +13,12 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // 2. REGLAS PARA RUTAS ESPECÍFICAS
-
     // Perfiles de Usuario
     match /users/{userId} {
       allow get, list: if request.auth != null;
       allow create, update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false; // Por seguridad en este prototipo
+      allow delete: if false;
 
-      // Regla de respaldo para membresías si se accede por ruta directa
       match /saving_circle_memberships/{membershipId} {
         allow read, write: if request.auth != null;
       }
@@ -31,9 +26,7 @@ service cloud.firestore {
 
     // Círculos de Ahorro
     match /saving_circles/{circleId} {
-      // Los planes deben ser públicos para que visitantes vean la proyección financiera
       allow read: if true;
-      // Creación y gestión por usuarios autenticados (simulando admin)
       allow write: if request.auth != null;
 
       match /bids/{bidId} {
