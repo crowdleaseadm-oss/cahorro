@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where } from 'firebase/firestore';
@@ -77,6 +78,7 @@ export default function ExplorePage() {
             const cuotaPromedio = totalPlanCost / n;
             
             const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
+            const memberProgress = ((circle.currentMemberCount || 0) / circle.memberCapacity) * 100;
 
             return (
               <Card key={circle.id} className="group flex flex-col h-full border-none shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden bg-white">
@@ -97,16 +99,12 @@ export default function ExplorePage() {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center text-xs text-muted-foreground font-medium">
-                      <Users className="h-3 w-3 mr-1" />
-                      {circle.currentMemberCount || 0}/{circle.memberCapacity}
-                    </div>
                   </div>
                   <CardTitle className="text-xl group-hover:text-primary transition-colors leading-tight">
                     {circle.name}
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 space-y-4">
+                <CardContent className="flex-1 space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Capital</span>
@@ -132,6 +130,18 @@ export default function ExplorePage() {
                         </TooltipProvider>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-widest">
+                      <span className="text-muted-foreground flex items-center gap-1">
+                        <Users className="h-3 w-3" /> Ocupación
+                      </span>
+                      <span className={isFull ? "text-orange-600" : "text-primary"}>
+                        {circle.currentMemberCount || 0} / {circle.memberCapacity}
+                      </span>
+                    </div>
+                    <Progress value={memberProgress} className={`h-2 ${isFull ? 'bg-orange-100' : 'bg-muted'}`} />
                   </div>
 
                   <div className="flex items-center justify-between text-sm text-muted-foreground bg-accent/30 p-3 rounded-lg border border-primary/5">
