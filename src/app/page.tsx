@@ -1,284 +1,220 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
-import { PiggyBank, Users, Calendar, Award, PartyPopper, Loader2, ArrowRight, Clock, Info } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
+import { 
+  PiggyBank, 
+  ShieldCheck, 
+  TrendingUp, 
+  Scale, 
+  CheckCircle2, 
+  ArrowRight, 
+  Users, 
+  Target, 
+  Zap, 
+  Lock,
+  ChevronRight,
+  BarChart3,
+  Award
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import Link from "next/link"
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, documentId } from 'firebase/firestore';
 
-export default function Dashboard() {
-  const { user, isUserLoading } = useUser();
-  const db = useFirestore();
-  const [mounted, setMounted] = useState(false);
-  const [nextDueDate, setNextDueDate] = useState<string>('');
-  const [isAnyCircleActive, setIsAnyCircleActive] = useState(false);
-
-  // 1. Fetch User Memberships
-  const membershipsRef = useMemoFirebase(() => 
-    (db && user ? collection(db, 'users', user.uid, 'saving_circle_memberships') : null), 
-    [db, user]
-  );
-  const { data: memberships, isLoading: membershipsLoading } = useCollection(membershipsRef);
-
-  // 2. Fetch Circle Statuses
-  const circleIds = useMemo(() => memberships?.map(m => m.savingCircleId) || [], [memberships]);
-  const circlesQuery = useMemoFirebase(() => {
-    if (!db || circleIds.length === 0) return null;
-    return query(collection(db, 'saving_circles'), where(documentId(), 'in', circleIds));
-  }, [db, circleIds.join(',')]);
-  const { data: circles, isLoading: circlesLoading } = useCollection(circlesQuery);
-
-  // 3. Filter valid memberships (only those whose circle still exists)
-  const validMemberships = useMemo(() => {
-    if (!memberships) return [];
-    if (!circles && !circlesLoading) return [];
-    if (!circles) return memberships; // Mientras carga, mostramos lo que hay
-    return memberships.filter(m => circles.some(c => c.id === m.savingCircleId));
-  }, [memberships, circles, circlesLoading]);
-
-  const adjudicatedMemberships = useMemo(() => 
-    validMemberships.filter(m => m.adjudicationStatus === 'Adjudicated'), 
-    [validMemberships]
-  );
-
-  const calculateNextInstallmentDate = (joiningDateStr: string) => {
-    const joinDate = new Date(joiningDateStr);
-    const minDateForSecond = new Date(joinDate.getTime() + 30 * 24 * 60 * 60 * 1000);
-    let next10th = new Date(joinDate.getFullYear(), joinDate.getMonth(), 10);
-    while (next10th < minDateForSecond) {
-      next10th.setMonth(next10th.getMonth() + 1);
-    }
-    return next10th;
-  };
-
-  useEffect(() => {
-    setMounted(true);
-    
-    if (validMemberships.length > 0 && circles) {
-      const activeCircleIds = circles
-        .filter(c => (c.currentMemberCount || 0) >= c.memberCapacity)
-        .map(c => c.id);
-
-      const activeMemberships = validMemberships.filter(m => activeCircleIds.includes(m.savingCircleId));
-      
-      if (activeMemberships.length > 0) {
-        setIsAnyCircleActive(true);
-        const nextDates = activeMemberships.map(m => calculateNextInstallmentDate(m.joiningDate));
-        const futureDates = nextDates.filter(d => d >= new Date());
-        
-        if (futureDates.length > 0) {
-          const earliest = new Date(Math.min(...futureDates.map(d => d.getTime())));
-          setNextDueDate(earliest.toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' }));
-        } else {
-          setNextDueDate('Día 10 del próximo mes');
-        }
-      } else {
-        setIsAnyCircleActive(false);
-        setNextDueDate('Pendiente de inicio de grupo');
-      }
-    } else {
-      setIsAnyCircleActive(false);
-      setNextDueDate(validMemberships.length === 0 ? 'Sin planes activos' : 'Cargando fechas...');
-    }
-  }, [validMemberships, circles]);
-
-  const formatCurrency = (val: number) => {
-    if (!mounted) return `$0.00`;
-    return `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  if (isUserLoading || membershipsLoading || (circleIds.length > 0 && circlesLoading)) {
-    return (
-      <div className="h-[80vh] flex flex-col items-center justify-center gap-4">
-        <Loader2 className="h-10 w-10 text-primary animate-spin" />
-        <p className="text-muted-foreground font-medium">Cargando tu resumen financiero...</p>
-      </div>
-    );
-  }
-
+export default function LandingPage() {
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Hola, {user?.displayName?.split(' ')[0] || 'Inversor'} 👋
-          </h1>
-          <p className="text-muted-foreground mt-1">Tu resumen de ahorro y adjudicaciones.</p>
+    <div className="max-w-7xl mx-auto space-y-24 pb-20">
+      {/* HERO SECTION */}
+      <section className="relative py-20 overflow-hidden">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-8">
+            <Badge variant="outline" className="px-4 py-1.5 border-primary/20 text-primary bg-primary/5 font-bold uppercase tracking-wider">
+              Ahorro Colaborativo en USD
+            </Badge>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tight text-foreground leading-[1.1]">
+              Círculo de <span className="text-primary italic">Ahorro</span>
+            </h1>
+            <p className="text-xl text-muted-foreground leading-relaxed max-w-lg">
+              La alternativa inteligente al sistema bancario. Accede a capital sin intereses abusivos mediante la fuerza de la comunidad y la transparencia digital.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+              <Button asChild size="lg" className="h-14 px-8 text-lg font-bold shadow-xl shadow-primary/20 rounded-2xl group">
+                <Link href="/explore">
+                  Explorar Círculos
+                  <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="h-14 px-8 text-lg font-bold border-2 rounded-2xl">
+                <Link href="/how-it-works">Ver Tutorial</Link>
+              </Button>
+            </div>
+          </div>
+          <div className="relative">
+            <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 to-secondary/20 blur-3xl rounded-full opacity-50" />
+            <div className="relative bg-white p-8 rounded-[2.5rem] shadow-2xl border border-white/50 space-y-6">
+              <div className="flex items-center gap-4 p-4 bg-accent/30 rounded-2xl">
+                <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center text-white">
+                  <TrendingUp className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-muted-foreground uppercase">Capital Promedio</p>
+                  <p className="text-xl font-black text-primary">$50,000 USD</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 bg-muted/30 rounded-2xl border border-border/50">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Interés Bancario</p>
+                  <p className="text-lg font-bold text-destructive line-through">12% - 18%</p>
+                </div>
+                <div className="p-4 bg-green-50 rounded-2xl border border-green-100">
+                  <p className="text-[10px] font-bold text-green-700 uppercase">Costo Círculo</p>
+                  <p className="text-lg font-bold text-green-700">0% Interés</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="bg-white px-3 py-1 font-medium border-primary/20 text-primary">
-            Socio Activo
-          </Badge>
-          <Button asChild className="shadow-lg shadow-primary/20">
-            <Link href="/explore">Explorar Círculos</Link>
+      </section>
+
+      {/* COMPARATIVA SECTION */}
+      <section className="space-y-12">
+        <div className="text-center space-y-4">
+          <h2 className="text-3xl font-black">Círculo vs. Sistema Tradicional</h2>
+          <p className="text-muted-foreground">¿Por qué miles de personas eligen el ahorro colaborativo?</p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-8">
+          <Card className="border-none shadow-md bg-white rounded-3xl overflow-hidden">
+            <CardHeader className="bg-destructive/5 border-b border-destructive/10 p-8">
+              <CardTitle className="flex items-center gap-3 text-destructive">
+                <BarChart3 className="h-6 w-6" /> Crédito Bancario
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-4">
+              {[
+                "Tasas de interés abusivas y variables.",
+                "Requisitos de calificación excluyentes.",
+                "Letras chicas y seguros obligatorios caros.",
+                "Endeudamiento a largo plazo con bancos."
+              ].map((item, i) => (
+                <div key={i} className="flex gap-3 text-muted-foreground">
+                  <span className="text-destructive font-bold">✕</span> {item}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+          <Card className="border-none shadow-md bg-white rounded-3xl overflow-hidden border-2 border-primary/20">
+            <CardHeader className="bg-primary/5 border-b border-primary/10 p-8">
+              <CardTitle className="flex items-center gap-3 text-primary">
+                <Zap className="h-6 w-6" /> Círculo de Ahorro
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-8 space-y-4">
+              {[
+                "0% de interés real sobre el capital.",
+                "Acceso equitativo mediante sorteo y licitación.",
+                "Gastos administrativos mínimos y transparentes.",
+                "Construcción de disciplina financiera comunal."
+              ].map((item, i) => (
+                <div key={i} className="flex gap-3 text-foreground font-medium">
+                  <CheckCircle2 className="h-5 w-5 text-primary" /> {item}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {/* TRANSPARENCIA SECTION */}
+      <section className="bg-primary rounded-[3rem] p-12 text-primary-foreground relative overflow-hidden">
+        <div className="absolute top-0 right-0 p-12 opacity-10">
+          <ShieldCheck className="h-64 w-64" />
+        </div>
+        <div className="relative grid lg:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <h2 className="text-4xl font-black">Transparencia <span className="text-secondary italic">Digital</span></h2>
+            <p className="text-lg opacity-90 leading-relaxed">
+              Utilizamos tecnología de vanguardia para asegurar que cada centavo esté donde debe estar. El administrador gestiona los grupos con reglas inmutables y los socios supervisan su plan en tiempo real.
+            </p>
+            <div className="grid grid-cols-2 gap-6 pt-4">
+              <div className="space-y-2">
+                <h4 className="font-bold text-xl flex items-center gap-2">
+                  <Lock className="h-5 w-5" /> 100% Seguro
+                </h4>
+                <p className="text-sm opacity-70">Fondos segregados y auditoría constante.</p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="font-bold text-xl flex items-center gap-2">
+                  <Users className="h-5 w-5" /> Comunidad
+                </h4>
+                <p className="text-sm opacity-70">Validación de socios rigurosa.</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/10 backdrop-blur-md rounded-3xl p-8 border border-white/20">
+            <h4 className="font-bold mb-6">Estado de Salud del Sistema</h4>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs font-bold uppercase"><span>Círculos Activos</span> <span>98%</span></div>
+                <div className="h-2 bg-white/20 rounded-full overflow-hidden"><div className="h-full bg-secondary w-[98%]" /></div>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs font-bold uppercase"><span>Adjudicaciones Exitosas</span> <span>100%</span></div>
+                <div className="h-2 bg-white/20 rounded-full overflow-hidden"><div className="h-full bg-secondary w-full" /></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* COMO FUNCIONA FAST */}
+      <section className="grid md:grid-cols-3 gap-8">
+        <div className="text-center space-y-4 p-8">
+          <div className="h-16 w-16 bg-accent rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Users className="h-8 w-8 text-primary" />
+          </div>
+          <h3 className="text-xl font-bold">1. Selección</h3>
+          <p className="text-muted-foreground text-sm">Elige el capital en USD y el plazo que mejor se adapte a tu objetivo.</p>
+        </div>
+        <div className="text-center space-y-4 p-8">
+          <div className="h-16 w-16 bg-accent rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <TrendingUp className="h-8 w-8 text-primary" />
+          </div>
+          <h3 className="text-xl font-bold">2. Aporte</h3>
+          <p className="text-muted-foreground text-sm">Realiza aportes mensuales sin intereses bancarios al fondo común.</p>
+        </div>
+        <div className="text-center space-y-4 p-8">
+          <div className="h-16 w-16 bg-accent rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <Award className="h-8 w-8 text-primary" />
+          </div>
+          <h3 className="text-xl font-bold">3. Adjudicación</h3>
+          <p className="text-muted-foreground text-sm">Recibe tu capital mediante sorteo mensual o licitación anticipada.</p>
+        </div>
+      </section>
+
+      {/* MARCO LEGAL */}
+      <section className="bg-white rounded-[2.5rem] p-10 shadow-sm border border-border flex flex-col md:flex-row items-center gap-10">
+        <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <Scale className="h-12 w-12 text-primary" />
+        </div>
+        <div className="space-y-4 flex-1">
+          <h2 className="text-2xl font-bold">Seguridad y Respaldo Legal</h2>
+          <p className="text-muted-foreground">
+            Cada círculo está respaldado por un contrato de adhesión legalmente vinculante, registrado ante las autoridades competentes. Cumplimos con las regulaciones de ahorro colectivo y protección de datos para garantizar que tu inversión esté siempre protegida.
+          </p>
+          <Button variant="link" asChild className="p-0 h-auto text-primary font-bold gap-2">
+            <Link href="/legal">Leer Marco Legal <ChevronRight className="h-4 w-4" /></Link>
           </Button>
         </div>
-      </div>
+      </section>
 
-      {adjudicatedMemberships.length > 0 && (
-        <div className="space-y-4">
-          {adjudicatedMemberships.map((m) => (
-            <Alert key={m.id} className="bg-primary text-primary-foreground border-none shadow-xl shadow-primary/20 animate-in fade-in slide-in-from-top-4 duration-500">
-              <PartyPopper className="h-6 w-6 text-white" />
-              <AlertTitle className="text-lg font-bold ml-2">¡Felicitaciones! Plan Adjudicado</AlertTitle>
-              <AlertDescription className="ml-2 opacity-90">
-                Tu plan <strong>{m.savingCircleName}</strong> ha sido seleccionado para adjudicación. 
-                Ponte en contacto con administración para coordinar la entrega de tu capital.
-              </AlertDescription>
-              <Button size="sm" variant="secondary" className="mt-4 font-bold" asChild>
-                <Link href="/my-circles">Ver Detalles</Link>
-              </Button>
-            </Alert>
-          ))}
-        </div>
-      )}
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className={`border-none shadow-sm ${isAnyCircleActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider opacity-80">Próximo Vencimiento</CardTitle>
-            <Clock className="h-4 w-4 opacity-80" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl font-bold">{nextDueDate}</div>
-            <p className="text-xs opacity-70 mt-1">
-              {isAnyCircleActive ? 'Cobro administrativo automático' : 'A la espera de conformación de grupo'}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Planes Suscriptos</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{validMemberships.length}</div>
-            <p className="text-xs text-muted-foreground mt-1">Suscripciones en USD</p>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm bg-secondary">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-bold uppercase tracking-wider text-secondary-foreground">Adjudicados</CardTitle>
-            <Award className="h-4 w-4 text-secondary-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-secondary-foreground">{adjudicatedMemberships.length}</div>
-            <p className="text-xs text-secondary-foreground/70 mt-1">Listos para adjudicar</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-7">
-        <Card className="md:col-span-4 border-none shadow-sm bg-white">
-          <CardHeader>
-            <CardTitle className="text-lg">Tus Planes de Ahorro</CardTitle>
-            <CardDescription>Seguimiento de fechas de pago y estado de grupo.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {validMemberships.length === 0 ? (
-              <div className="py-10 text-center bg-muted/20 rounded-2xl border-dashed border-2">
-                <p className="text-muted-foreground italic">Aún no tienes suscripciones activas.</p>
-                <Button variant="link" asChild className="mt-2"><Link href="/explore">Explorar opciones</Link></Button>
-              </div>
-            ) : (
-              validMemberships.map((membership) => {
-                const circle = circles?.find(c => c.id === membership.savingCircleId);
-                const isCircleActive = circle && (circle.currentMemberCount || 0) >= circle.memberCapacity;
-                const totalCapital = membership.capitalPaid + membership.outstandingCapitalBalance;
-                const nextPayDate = isCircleActive ? calculateNextInstallmentDate(membership.joiningDate) : null;
-                
-                return (
-                  <div key={membership.id} className="group p-5 rounded-2xl bg-muted/30 hover:bg-muted/50 transition-colors border border-transparent hover:border-border">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex flex-col">
-                        <h4 className="font-bold text-foreground group-hover:text-primary transition-colors">{membership.savingCircleName}</h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge variant={isCircleActive ? "default" : "secondary"} className={`text-[10px] h-5 ${isCircleActive ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'} border-none`}>
-                            {isCircleActive ? 'GRUPO ACTIVO' : 'GRUPO EN FORMACIÓN'}
-                          </Badge>
-                          <span className="text-[10px] text-muted-foreground">Capital: {formatCurrency(totalCapital)}</span>
-                        </div>
-                      </div>
-                      <Badge variant={membership.adjudicationStatus === 'Adjudicated' ? "default" : "outline"} className={membership.adjudicationStatus === 'Adjudicated' ? "bg-green-100 text-green-700 border-none" : ""}>
-                        {membership.adjudicationStatus === 'Adjudicated' ? 'Adjudicado' : 'Pendiente'}
-                      </Badge>
-                    </div>
-                    
-                    <div className="mt-5 flex items-center justify-between gap-4">
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest flex items-center gap-1">
-                            Vencimiento
-                            {!isCircleActive && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Info className="h-3 w-3" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p className="text-xs">El vencimiento se activará cuando el grupo esté completo.</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </span>
-                          <span className={`text-sm font-bold ${isCircleActive ? 'text-foreground' : 'text-muted-foreground'}`}>
-                            {nextPayDate ? nextPayDate.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : 'TBD'}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Cuotas Pagas</span>
-                          <span className="text-sm font-bold text-primary">{membership.paidInstallmentsCount} Meses</span>
-                        </div>
-                      </div>
-                      <Button variant="outline" size="sm" asChild className="bg-white border-primary/20 text-primary hover:bg-primary hover:text-white transition-all">
-                        <Link href={`/explore/${membership.savingCircleId}`}>Ver Detalle</Link>
-                      </Button>
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-3 border-none shadow-sm bg-white">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Próximos Pasos</CardTitle>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <CardDescription>Acciones recomendadas para tu plan.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 rounded-xl border border-primary/10 bg-primary/5 space-y-2">
-              <h5 className="text-sm font-bold">Licitación Abierta</h5>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                ¿Quieres adjudicar antes? Realiza una oferta de licitación en tus círculos activos.
-              </p>
-              <Button size="sm" variant="link" className="p-0 h-auto text-primary font-bold" asChild>
-                <Link href="/my-circles">Ir a Mis Círculos</Link>
-              </Button>
-            </div>
-            <div className="p-4 rounded-xl border border-border bg-muted/20 space-y-2">
-              <h5 className="text-sm font-bold">Nuevas Oportunidades</h5>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Explora nuevos círculos en USD con alícuotas competitivas.
-              </p>
-              <Button size="sm" variant="link" className="p-0 h-auto text-muted-foreground font-bold" asChild>
-                <Link href="/explore">Ver Catálogo</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* FINAL CTA */}
+      <section className="text-center py-20 bg-muted/30 rounded-[3rem] border border-dashed border-primary/20">
+        <h2 className="text-4xl font-black mb-6">¿Listo para transformar tu ahorro?</h2>
+        <p className="text-muted-foreground mb-10 max-w-xl mx-auto">Únete hoy a la comunidad financiera más transparente y eficiente de la región.</p>
+        <Button asChild size="lg" className="h-14 px-12 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20">
+          <Link href="/explore">Empezar Ahora</Link>
+        </Button>
+      </section>
     </div>
   )
 }

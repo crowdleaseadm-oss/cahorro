@@ -1,12 +1,13 @@
+
 "use client"
 
 import * as React from "react"
 import {
+  Home,
   LayoutDashboard,
   Search,
   PiggyBank,
   ShieldCheck,
-  Info,
   HelpCircle,
   LogOut,
   ChevronRight,
@@ -26,12 +27,12 @@ import {
   SidebarGroupLabel,
   SidebarGroupContent,
 } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 const navigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Inicio", href: "/", icon: Home },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Explorar Círculos", href: "/explore", icon: Search },
   { name: "Mis Círculos", href: "/my-circles", icon: PiggyBank },
 ]
