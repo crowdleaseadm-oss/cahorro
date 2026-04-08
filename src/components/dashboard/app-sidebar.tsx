@@ -28,7 +28,9 @@ import {
   SidebarGroupContent,
 } from "@/components/ui/sidebar"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import { useAuth, useUser } from "@/firebase"
+import { signOut } from "firebase/auth"
 
 const navigation = [
   { name: "Inicio", href: "/", icon: Home },
@@ -45,6 +47,18 @@ const infoPages = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const router = useRouter()
+  const auth = useAuth()
+  const { user } = useUser()
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth)
+      router.push("/")
+    } catch (error) {
+      console.error("Error al cerrar sesión:", error)
+    }
+  }
 
   return (
     <Sidebar className="border-r border-border bg-white shadow-sm">
@@ -111,8 +125,8 @@ export function AppSidebar() {
       <SidebarFooter className="p-4 mt-auto space-y-4">
         <div className="rounded-2xl bg-accent/50 p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <span className="text-xs font-semibold text-primary">Admin Panel</span>
+            <div className={`h-2 w-2 rounded-full ${user ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
+            <span className="text-xs font-semibold text-primary">Panel Admin</span>
           </div>
           <Link href="/admin">
             <SidebarMenuButton className="w-full justify-between bg-white border border-border shadow-sm hover:shadow-md transition-all">
@@ -125,10 +139,15 @@ export function AppSidebar() {
           </Link>
         </div>
         
-        <SidebarMenuButton className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive">
-          <LogOut className="h-4 w-4" />
-          <span className="font-medium">Cerrar Sesión</span>
-        </SidebarMenuButton>
+        {user && (
+          <SidebarMenuButton 
+            className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="font-medium">Cerrar Sesión</span>
+          </SidebarMenuButton>
+        )}
       </SidebarFooter>
     </Sidebar>
   )
