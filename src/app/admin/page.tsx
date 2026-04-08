@@ -13,31 +13,34 @@ import {
   Loader2,
   TrendingUp,
   BarChart3,
-  ArrowRight,
-  Info,
   Share2,
   Edit2,
   Mail,
   Copy,
   CheckCircle2,
-  Settings2
+  Settings2,
+  Info,
+  DollarSign,
+  Gavel
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useFirestore, useCollection, useMemoFirebase, useUser, useAuth } from '@/firebase';
 import { collection, serverTimestamp, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 import Link from 'next/link';
 import { toast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 export default function AdminPage() {
   const db = useFirestore();
@@ -75,11 +78,15 @@ export default function AdminPage() {
 
     return filtered.reduce((acc, circle) => {
       const subRate = circle.subscriptionFeeRate || 0.03;
-      const subFeePerMember = (circle.targetCapital * subRate) * IVA_RATE;
+      const subFeePerMember = circle.subscriptionVatApplied 
+        ? (circle.targetCapital * subRate) * IVA_RATE 
+        : (circle.targetCapital * subRate);
       
       const alicuota = circle.targetCapital / circle.totalInstallments;
       const adminRate = circle.administrativeFeeRate || 0.10;
-      const adminFeePerMember = (alicuota * adminRate) * IVA_RATE;
+      const adminFeePerMember = circle.adminVatApplied 
+        ? (alicuota * adminRate) * IVA_RATE 
+        : (alicuota * adminRate);
 
       return {
         subPercibida: acc.subPercibida + (subFeePerMember * (circle.currentMemberCount || 0)),
@@ -103,27 +110,26 @@ export default function AdminPage() {
     bidMethodCount: 1,
     isPrivate: false,
     password: '',
+    subscriptionVatApplied: true,
+    adminVatApplied: true,
+    lifeInsuranceVatApplied: false
   });
 
   const calculations = useMemo(() => {
     const alicuota = formData.targetCapital / formData.totalInstallments;
+    // Capacidad: Cuotas * Adjudicaciones por mes
     const capacity = formData.totalInstallments * (formData.drawMethodCount + formData.bidMethodCount);
     return { alicuota, capacity };
   }, [formData]);
 
-  const generateCustomId = () => {
-    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const nums = "0123456789";
-    let l = "";
-    for (let i = 0; i < 4; i++) l += letters[Math.floor(Math.random() * letters.length)];
-    let n = "";
-    for (let i = 0; i < 4; i++) n += nums[Math.floor(Math.random() * nums.length)];
-    return l + n;
-  };
-
   const handleCreateCircle = () => {
     if (!db || !user) return;
-    const customId = generateCustomId();
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const nums = "0123456789";
+    let l = ""; for (let i = 0; i < 4; i++) l += letters[Math.floor(Math.random() * letters.length)];
+    let n = ""; for (let i = 0; i < 4; i++) n += nums[Math.floor(Math.random() * nums.length)];
+    const customId = l + n;
+
     const newCircle = {
       ...formData,
       id: customId,
@@ -161,12 +167,6 @@ export default function AdminPage() {
     toast({ title: "Círculo Eliminado", variant: "destructive" });
   };
 
-  const copyInviteLink = (circle: any) => {
-    const link = `${window.location.origin}/explore/${circle.id}`;
-    navigator.clipboard.writeText(link);
-    toast({ title: "Enlace Copiado", description: "El enlace de invitación está en tu portapapeles." });
-  };
-
   const formatCurrency = (val: number) => {
     return val.toLocaleString(undefined, { maximumFractionDigits: 0 });
   };
@@ -174,7 +174,7 @@ export default function AdminPage() {
   if (isUserLoading || !user) return (
     <div className="h-[60vh] flex flex-col items-center justify-center gap-4">
       <Loader2 className="h-10 w-10 text-primary animate-spin" />
-      <p className="text-muted-foreground font-medium">Accediendo al Panel de Control...</p>
+      <p className="text-muted-foreground font-medium">Cargando Panel Administrativo...</p>
     </div>
   );
 
@@ -184,13 +184,13 @@ export default function AdminPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <ShieldCheck className="h-9 w-9 text-primary" />
-            Gestión Administrativa
+            Panel de Control
           </h1>
-          <p className="text-muted-foreground mt-1">Supervisión de salud financiera y control de grupos.</p>
+          <p className="text-muted-foreground mt-1">Gestión operativa y salud financiera de los círculos.</p>
         </div>
         <div className="flex items-center gap-3">
           <Select value={selectedCircleFilter} onValueChange={setSelectedCircleFilter}>
-            <SelectTrigger className="w-[220px] bg-white border-primary/20">
+            <SelectTrigger className="w-[220px] bg-white">
               <SelectValue placeholder="Filtrar Dashboard" />
             </SelectTrigger>
             <SelectContent>
@@ -200,10 +200,9 @@ export default function AdminPage() {
               ))}
             </SelectContent>
           </Select>
-          
           <Button onClick={() => setIsCreateOpen(true)} className="shadow-lg shadow-primary/20 gap-2 h-11 px-6">
             <Plus className="h-5 w-5" />
-            Nuevo Círculo
+            Nuevo Grupo
           </Button>
         </div>
       </div>
@@ -211,11 +210,8 @@ export default function AdminPage() {
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="border-none shadow-md bg-primary text-primary-foreground relative overflow-hidden group">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider opacity-90 flex items-center gap-1">
-              Suscripciones Percibidas / Proyectadas
-              <TooltipProvider><Tooltip><TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger><TooltipContent><p className="text-[10px]">Facturación total por derecho de ingreso (Percibido hoy / Meta total).</p></TooltipContent></Tooltip></TooltipProvider>
-            </CardTitle>
-            <TrendingUp className="h-5 w-5 opacity-50 group-hover:opacity-100 transition-opacity" />
+            <CardTitle className="text-xs font-bold uppercase tracking-wider opacity-90">Suscripciones (Ingreso)</CardTitle>
+            <TrendingUp className="h-5 w-5 opacity-50" />
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-2">
@@ -223,15 +219,13 @@ export default function AdminPage() {
               <span className="text-lg opacity-40">/</span>
               <span className="text-lg opacity-60">${formatCurrency(financialStats.subProyectada)}</span>
             </div>
+            <p className="text-[10px] mt-2 opacity-70 italic font-medium">Estimación bruta (Percibido / Total Proyectado)</p>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-md bg-white border-l-4 border-l-primary">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-              Gtos. Admin. Percibidos / Proyectados
-              <TooltipProvider><Tooltip><TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger><TooltipContent><p className="text-[10px]">Ingreso recurrente mensual (MRR) estimado (Percibido hoy / Meta total).</p></TooltipContent></Tooltip></TooltipProvider>
-            </CardTitle>
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Gastos Admin. (Recurrente)</CardTitle>
             <BarChart3 className="h-5 w-5 text-primary opacity-50" />
           </CardHeader>
           <CardContent>
@@ -240,12 +234,13 @@ export default function AdminPage() {
               <span className="text-lg text-muted-foreground/30">/</span>
               <span className="text-lg text-muted-foreground/60">${formatCurrency(financialStats.adminProyectada)}</span>
             </div>
+            <p className="text-[10px] mt-2 text-muted-foreground italic font-medium">Carga mensual estimada (Percibido / Total Proyectado)</p>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-md bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Miembros Actuales / Capacidad</CardTitle>
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ocupación de Miembros</CardTitle>
             <Users className="h-5 w-5 text-primary opacity-50" />
           </CardHeader>
           <CardContent>
@@ -254,43 +249,31 @@ export default function AdminPage() {
               <span className="text-lg text-muted-foreground/30">/</span>
               <span className="text-lg text-muted-foreground/60">{financialStats.totalCapacity}</span>
             </div>
+            <p className="text-[10px] mt-2 text-muted-foreground italic font-medium">Participaciones suscriptas vs. capacidad total</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border-none shadow-xl bg-white overflow-hidden rounded-3xl">
+      <Card className="border-none shadow-xl bg-white rounded-3xl overflow-hidden">
         <CardHeader className="border-b bg-muted/30 px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl font-bold">Gestión de Círculos de Ahorro</CardTitle>
-              <CardDescription>Visualización y control administrativo de grupos activos.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input className="pl-9 h-9 w-[240px] bg-white border-muted shadow-none focus-visible:ring-primary" placeholder="Buscar círculo..." />
-              </div>
-            </div>
-          </div>
+          <CardTitle className="text-xl font-bold">Gestión de Círculos</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-muted/10">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="px-8 font-bold text-xs uppercase tracking-widest text-muted-foreground">ID / Nombre</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Capital (USD)</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Miembros</TableHead>
-                <TableHead className="font-bold text-xs uppercase tracking-widest text-muted-foreground">Estado</TableHead>
-                <TableHead className="text-right px-8 font-bold text-xs uppercase tracking-widest text-muted-foreground">Acciones</TableHead>
+              <TableRow>
+                <TableHead className="px-8 font-bold text-xs uppercase tracking-widest">ID / Nombre</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-widest">Capital (USD)</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-widest">Miembros</TableHead>
+                <TableHead className="font-bold text-xs uppercase tracking-widest">Estado</TableHead>
+                <TableHead className="text-right px-8 font-bold text-xs uppercase tracking-widest">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {circlesLoading ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-20"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
-              ) : !circlesList || circlesList.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic">No hay círculos creados aún.</TableCell></TableRow>
-              ) : circlesList.map((circle) => (
-                <TableRow key={circle.id} className="group hover:bg-muted/5 transition-colors border-muted/50">
+              ) : circlesList?.map((circle) => (
+                <TableRow key={circle.id} className="group hover:bg-muted/5">
                   <TableCell className="px-8 py-5">
                     <div className="flex flex-col">
                       <span className="font-mono text-[10px] font-bold text-primary">{circle.id}</span>
@@ -300,80 +283,38 @@ export default function AdminPage() {
                   <TableCell className="font-black text-sm text-foreground">${circle.targetCapital.toLocaleString()}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className="h-2 w-24 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-500" 
-                          style={{ width: `${Math.min(100, ((circle.currentMemberCount || 0) / circle.memberCapacity) * 100)}%` }} 
-                        />
-                      </div>
                       <span className="text-xs font-bold text-primary">{circle.currentMemberCount || 0} / {circle.memberCapacity}</span>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={circle.status === "Active" ? "default" : "secondary"} className="text-[10px] uppercase font-bold tracking-tighter px-2">
-                      {circle.status === "Active" ? "Activo" : "Completado"}
+                    <Badge variant={circle.status === "Active" ? "default" : "secondary"}>
+                      {circle.status === "Active" ? "Activo" : "Cerrado"}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right px-8 py-5">
                     <div className="flex items-center justify-end gap-1">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => { setSelectedCircle(circle); setIsInviteOpen(true); }}>
-                              <Mail className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Enviar Invitación</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10" asChild>
-                              <Link href={`/admin/circles/${circle.id}`}><Eye className="h-4 w-4" /></Link>
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Ver Miembros</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => { 
-                              setSelectedCircle(circle); 
-                              setFormData({ 
-                                name: circle.name,
-                                targetCapital: circle.targetCapital,
-                                totalInstallments: circle.totalInstallments,
-                                subscriptionFeeRate: circle.subscriptionFeeRate,
-                                administrativeFeeRate: circle.administrativeFeeRate,
-                                lifeInsuranceRate: circle.lifeInsuranceRate,
-                                drawMethodCount: circle.drawMethodCount,
-                                bidMethodCount: circle.bidMethodCount,
-                                isPrivate: circle.isPrivate,
-                                password: circle.password || '',
-                              });
-                              setIsEditOpen(true); 
-                            }}>
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Editar</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setCircleToDelete(circle)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Eliminar</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
+                      <Button variant="ghost" size="icon" onClick={() => { setSelectedCircle(circle); setIsInviteOpen(true); }}><Mail className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" asChild><Link href={`/admin/circles/${circle.id}`}><Eye className="h-4 w-4" /></Link></Button>
+                      <Button variant="ghost" size="icon" onClick={() => { 
+                        setSelectedCircle(circle); 
+                        setFormData({ 
+                          name: circle.name,
+                          targetCapital: circle.targetCapital,
+                          totalInstallments: circle.totalInstallments,
+                          subscriptionFeeRate: circle.subscriptionFeeRate,
+                          administrativeFeeRate: circle.administrativeFeeRate,
+                          lifeInsuranceRate: circle.lifeInsuranceRate,
+                          drawMethodCount: circle.drawMethodCount,
+                          bidMethodCount: circle.bidMethodCount,
+                          isPrivate: circle.isPrivate,
+                          password: circle.password || '',
+                          subscriptionVatApplied: circle.subscriptionVatApplied ?? true,
+                          adminVatApplied: circle.adminVatApplied ?? true,
+                          lifeInsuranceVatApplied: circle.lifeInsuranceVatApplied ?? false
+                        });
+                        setIsEditOpen(true); 
+                      }}><Edit2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => setCircleToDelete(circle)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -383,137 +324,160 @@ export default function AdminPage() {
         </CardContent>
       </Card>
 
-      {/* DIÁLOGOS */}
-      
-      {/* Crear Círculo */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh] rounded-3xl">
+      {/* DIÁLOGOS DE CREACIÓN Y EDICIÓN */}
+      <Dialog open={isCreateOpen || isEditOpen} onOpenChange={(val) => isCreateOpen ? setIsCreateOpen(val) : setIsEditOpen(val)}>
+        <DialogContent className="max-w-4xl overflow-y-auto max-h-[90vh] rounded-3xl p-8">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <Plus className="h-6 w-6 text-primary" />
-              Configurar Nuevo Círculo
+            <DialogTitle className="text-2xl font-bold flex items-center gap-3">
+              {isCreateOpen ? <Plus className="h-7 w-7 text-primary" /> : <Edit2 className="h-7 w-7 text-primary" />}
+              {isCreateOpen ? "Nuevo Círculo de Ahorro" : `Editar Círculo ${selectedCircle?.id}`}
             </DialogTitle>
-            <DialogDescription>Defina los parámetros financieros y operativos del grupo.</DialogDescription>
+            <DialogDescription>Configure los parámetros financieros y operativos del grupo colaborativo.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 py-4">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
-                <PiggyBank className="h-4 w-4" /> Configuración General
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
+
+          <div className="grid gap-10 py-6">
+            {/* SECCIÓN ADMINISTRATIVA */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-wider text-xs">
+                <Settings2 className="h-4 w-4" /> Configuración Administrativa
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre del Círculo</Label>
-                  <Input value={formData.name} placeholder="Ej. Círculo Gold I" onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Nombre del Círculo</Label>
+                  <Input value={formData.name} placeholder="Ej. Círculo Platinum 100" onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                  <p className="text-[10px] text-muted-foreground px-1">Nombre público identificativo del grupo.</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Capital Suscripto (USD)</Label>
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Acceso y Seguridad</Label>
+                  <div className="flex items-center gap-4 h-10 px-3 bg-muted/20 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Checkbox checked={formData.isPrivate} onCheckedChange={(val) => setFormData({...formData, isPrivate: !!val})} />
+                      <span className="text-sm font-medium">Acceso Privado</span>
+                    </div>
+                    {formData.isPrivate && (
+                      <Input value={formData.password} placeholder="Contraseña" className="h-7 text-xs bg-white" onChange={(e) => setFormData({...formData, password: e.target.value})} />
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground px-1">Requiere contraseña para ver la proyección del plan.</p>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* SECCIÓN FINANCIERA */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-wider text-xs">
+                <DollarSign className="h-4 w-4" /> Parámetros Financieros & IVA
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Capital Suscripto (USD)</Label>
                   <Input type="number" step="5000" value={formData.targetCapital} onChange={(e) => setFormData({...formData, targetCapital: Number(e.target.value)})} />
+                  <p className="text-[10px] text-muted-foreground px-1">Capital total a adjudicar por sorteo/licitación.</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Plazo (Cuotas)</Label>
-                  <Input type="number" value={formData.totalInstallments} onChange={(e) => setFormData({...formData, totalInstallments: Number(e.target.value)})} />
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Plazo del Plan (Meses)</Label>
+                  <Select value={formData.totalInstallments.toString()} onValueChange={(val) => setFormData({...formData, totalInstallments: Number(val)})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Array.from({length: 10}, (_, i) => (i + 1) * 12).map(plazo => (
+                        <SelectItem key={plazo} value={plazo.toString()}>{plazo} meses</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground px-1">Cantidad total de cuotas del plan de ahorro.</p>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Acceso</Label>
-                  <div className="flex items-center gap-3 h-10 px-3 bg-muted/30 rounded-lg">
-                    <input type="checkbox" checked={formData.isPrivate} onChange={(e) => setFormData({...formData, isPrivate: e.target.checked})} className="h-4 w-4 rounded border-primary text-primary" />
-                    <span className="text-sm font-medium">Privado con contraseña</span>
+                <div className="bg-primary/5 p-4 rounded-xl flex flex-col justify-center border border-primary/10">
+                  <Label className="text-[10px] font-bold text-primary uppercase mb-1">Alícuota Pura</Label>
+                  <div className="text-xl font-black text-primary">${calculations.alicuota.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-muted/10 p-6 rounded-2xl">
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Derecho Suscripción (%)</Label>
+                  <Input type="number" step="0.01" value={formData.subscriptionFeeRate} onChange={(e) => setFormData({...formData, subscriptionFeeRate: Number(e.target.value)})} />
+                  <div className="flex items-center gap-2 mt-2">
+                    <Checkbox checked={formData.subscriptionVatApplied} onCheckedChange={(v) => setFormData({...formData, subscriptionVatApplied: !!v})} />
+                    <span className="text-[10px] font-bold">Aplicar IVA (21%)</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Gasto Administrativo (%)</Label>
+                  <Input type="number" step="0.01" value={formData.administrativeFeeRate} onChange={(e) => setFormData({...formData, administrativeFeeRate: Number(e.target.value)})} />
+                  <div className="flex items-center gap-2 mt-2">
+                    <Checkbox checked={formData.adminVatApplied} onCheckedChange={(v) => setFormData({...formData, adminVatApplied: !!v})} />
+                    <span className="text-[10px] font-bold">Aplicar IVA (21%)</span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Seguro de Vida (%)</Label>
+                  <Input type="number" step="0.0001" value={formData.lifeInsuranceRate} onChange={(e) => setFormData({...formData, lifeInsuranceRate: Number(e.target.value)})} />
+                  <div className="flex items-center gap-2 mt-2">
+                    <Checkbox checked={formData.lifeInsuranceVatApplied} onCheckedChange={(v) => setFormData({...formData, lifeInsuranceVatApplied: !!v})} />
+                    <span className="text-[10px] font-bold">Aplicar IVA (21%)</span>
                   </div>
                 </div>
               </div>
-              {formData.isPrivate && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Contraseña de Acceso</Label>
-                  <Input type="text" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
-                </div>
-              )}
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
-                <Settings2 className="h-4 w-4" /> Parámetros y Porcentajes
-              </h3>
-              <div className="grid grid-cols-3 gap-4">
+            <Separator />
+
+            {/* SECCIÓN OPERATIVA */}
+            <div className="space-y-6">
+              <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-wider text-xs">
+                <Gavel className="h-4 w-4" /> Métodos de Adjudicación
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Suscripción (%)</Label>
-                  <Input type="number" step="0.01" value={formData.subscriptionFeeRate} onChange={(e) => setFormData({...formData, subscriptionFeeRate: Number(e.target.value)})} />
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Adjudicaciones por Sorteo (Mensual)</Label>
+                  <Select value={formData.drawMethodCount.toString()} onValueChange={(val) => setFormData({...formData, drawMethodCount: Number(val)})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[0, 1, 2, 3, 4, 5].map(n => (
+                        <SelectItem key={n} value={n.toString()}>{n} cupos por mes</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground px-1">Cantidad de miembros adjudicados al azar cada mes.</p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Admin (%)</Label>
-                  <Input type="number" step="0.01" value={formData.administrativeFeeRate} onChange={(e) => setFormData({...formData, administrativeFeeRate: Number(e.target.value)})} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Seguro Vida (%)</Label>
-                  <Input type="number" step="0.0001" value={formData.lifeInsuranceRate} onChange={(e) => setFormData({...formData, lifeInsuranceRate: Number(e.target.value)})} />
+                  <Label className="text-xs font-bold text-muted-foreground uppercase">Adjudicaciones por Licitación (Mensual)</Label>
+                  <Select value={formData.bidMethodCount.toString()} onValueChange={(val) => setFormData({...formData, bidMethodCount: Number(val)})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[0, 1, 2, 3, 4, 5].map(n => (
+                        <SelectItem key={n} value={n.toString()}>{n} cupos por mes</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground px-1">Cantidad de miembros que pueden adelantar cuotas para adjudicar.</p>
                 </div>
               </div>
-            </div>
-
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
-                <Users className="h-4 w-4" /> Métodos de Adjudicación
-              </h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Sorteos por Mes</Label>
-                  <Input type="number" min="1" max="5" value={formData.drawMethodCount} onChange={(e) => setFormData({...formData, drawMethodCount: Number(e.target.value)})} />
+              <div className="bg-accent/30 p-5 rounded-2xl flex items-center justify-between border border-primary/10">
+                <div className="flex items-center gap-3">
+                  <Users className="h-6 w-6 text-primary" />
+                  <div>
+                    <h4 className="text-sm font-bold">Capacidad Total del Grupo</h4>
+                    <p className="text-[10px] text-muted-foreground">Plazo x Adjudicaciones Mensuales Totales</p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Licitaciones por Mes</Label>
-                  <Input type="number" min="1" max="5" value={formData.bidMethodCount} onChange={(e) => setFormData({...formData, bidMethodCount: Number(e.target.value)})} />
-                </div>
+                <div className="text-2xl font-black text-primary">{calculations.capacity} Miembros</div>
               </div>
             </div>
           </div>
-          <DialogFooter className="gap-2 pt-4 border-t">
-            <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreateCircle} className="px-8 shadow-lg shadow-primary/20">Generar Círculo Administrativo</Button>
+
+          <DialogFooter className="gap-3 pt-6 border-t">
+            <Button variant="ghost" onClick={() => isCreateOpen ? setIsCreateOpen(false) : setIsEditOpen(false)}>Cancelar</Button>
+            <Button onClick={isCreateOpen ? handleCreateCircle : handleUpdateCircle} className="px-10 shadow-lg shadow-primary/20 h-12 text-lg font-bold">
+              {isCreateOpen ? "Generar Círculo Operativo" : "Guardar Cambios"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Editar Círculo */}
-      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh] rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <Edit2 className="h-6 w-6 text-primary" />
-              Editar Círculo {selectedCircle?.id}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-6 py-4">
-             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
-                  <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Capital (USD)</Label>
-                  <Input type="number" value={formData.targetCapital} onChange={(e) => setFormData({...formData, targetCapital: Number(e.target.value)})} />
-                </div>
-             </div>
-             <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Suscripción (%)</Label>
-                  <Input type="number" step="0.01" value={formData.subscriptionFeeRate} onChange={(e) => setFormData({...formData, subscriptionFeeRate: Number(e.target.value)})} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Admin (%)</Label>
-                  <Input type="number" step="0.01" value={formData.administrativeFeeRate} onChange={(e) => setFormData({...formData, administrativeFeeRate: Number(e.target.value)})} />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-muted-foreground">Seguro Vida (%)</Label>
-                  <Input type="number" step="0.0001" value={formData.lifeInsuranceRate} onChange={(e) => setFormData({...formData, lifeInsuranceRate: Number(e.target.value)})} />
-                </div>
-             </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleUpdateCircle} className="w-full h-12 text-lg font-bold">Guardar Cambios</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Enviar Invitación */}
+      {/* DIÁLOGOS DE APOYO */}
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
         <DialogContent className="max-w-md rounded-3xl">
           <DialogHeader>
@@ -521,7 +485,6 @@ export default function AdminPage() {
               <Share2 className="h-6 w-6 text-primary" />
               Enviar Invitación
             </DialogTitle>
-            <DialogDescription>Comparte el acceso directo al plan financiero con un potencial socio.</DialogDescription>
           </DialogHeader>
           <div className="py-8 space-y-6">
             <div className="p-6 bg-muted/30 rounded-2xl border border-dashed border-primary/20 text-center space-y-3">
@@ -532,31 +495,25 @@ export default function AdminPage() {
               <Label className="text-xs font-bold text-muted-foreground">Enlace Directo</Label>
               <div className="flex gap-2">
                 <Input readOnly value={selectedCircle ? `${window.location.origin}/explore/${selectedCircle.id}` : ''} className="bg-muted font-mono text-[10px]" />
-                <Button size="icon" variant="outline" onClick={() => copyInviteLink(selectedCircle)}>
+                <Button size="icon" variant="outline" onClick={() => {
+                   navigator.clipboard.writeText(`${window.location.origin}/explore/${selectedCircle?.id}`);
+                   toast({ title: "Enlace Copiado" });
+                }}>
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </div>
           </div>
-          <Button className="w-full h-12 text-lg font-bold gap-2" onClick={() => setIsInviteOpen(false)}>
-            <CheckCircle2 className="h-5 w-5" />
-            Listo
-          </Button>
+          <Button className="w-full h-12 text-lg font-bold" onClick={() => setIsInviteOpen(false)}>Listo</Button>
         </DialogContent>
       </Dialog>
 
-      {/* Eliminar Círculo */}
       <AlertDialog open={!!circleToDelete} onOpenChange={(open) => !open && setCircleToDelete(null)}>
         <AlertDialogContent className="rounded-3xl">
-          <CardHeader className="p-0 space-y-4">
-            <div className="h-16 w-16 bg-destructive/10 text-destructive rounded-full flex items-center justify-center mx-auto">
-              <Trash2 className="h-8 w-8" />
-            </div>
-            <div className="text-center space-y-2">
-              <AlertDialogTitle className="text-xl font-bold">¿Eliminar círculo {circleToDelete?.id}?</AlertDialogTitle>
-              <p className="text-muted-foreground text-sm">Esta acción es permanente. Se perderá todo el historial financiero y las membresías asociadas al grupo <strong>{circleToDelete?.name}</strong>.</p>
-            </div>
-          </CardHeader>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold text-center">¿Eliminar círculo {circleToDelete?.id}?</AlertDialogTitle>
+            <p className="text-muted-foreground text-sm text-center">Esta acción es permanente y eliminará todo el historial financiero asociado.</p>
+          </AlertDialogHeader>
           <div className="flex flex-col gap-3 mt-6">
             <AlertDialogAction onClick={() => circleToDelete && handleDeleteCircle(circleToDelete.id)} className="bg-destructive hover:bg-destructive/90 h-12 font-bold text-lg rounded-xl">Eliminar Permanentemente</AlertDialogAction>
             <AlertDialogCancel className="h-12 font-bold rounded-xl border-none">Cancelar</AlertDialogCancel>

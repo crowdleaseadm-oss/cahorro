@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -57,22 +57,16 @@ export default function CirclePlanPage() {
   const handleUnlock = () => {
     if (passwordInput === circle?.password) {
       setIsLocked(false);
-      toast({ title: "Acceso Concedido", description: "Ahora puede ver los detalles del plan." });
+      toast({ title: "Acceso Concedido" });
     } else {
       toast({ title: "Error", description: "Contraseña incorrecta.", variant: "destructive" });
     }
   };
 
   const handleDownloadReceipt = (num: number) => {
-    toast({
-      title: "Generando recibo...",
-      description: `El recibo de la cuota #${num} se descargará en breve. (IVA 21% Desglosado)`,
-    });
+    toast({ title: "Generando recibo...", description: `Descarga de Cuota #${num} en proceso.` });
     setTimeout(() => {
-      toast({
-        title: "Descarga completada",
-        description: `Recibo_Cuota_${num}_${circle?.id}.pdf`,
-      });
+      toast({ title: "Descarga completada", description: `Recibo_Cuota_${num}_${circle?.id}.pdf` });
     }, 2000);
   };
 
@@ -86,7 +80,6 @@ export default function CirclePlanPage() {
   if (!circle) return (
     <div className="p-20 text-center space-y-4">
        <h1 className="text-2xl font-bold text-destructive">Plan no encontrado</h1>
-       <p className="text-muted-foreground">El círculo que buscas no existe o ha sido removido.</p>
        <Button asChild variant="outline"><Link href="/explore">Volver a Explorar</Link></Button>
     </div>
   );
@@ -99,24 +92,12 @@ export default function CirclePlanPage() {
         </div>
         <div className="text-center space-y-2">
           <h1 className="text-2xl font-bold">Círculo Privado</h1>
-          <p className="text-muted-foreground">Este grupo requiere una contraseña de acceso para ver su proyección financiera.</p>
+          <p className="text-muted-foreground">Este grupo requiere contraseña para ver la proyección financiera.</p>
         </div>
         <div className="w-full space-y-4">
-          <Input 
-            type="password" 
-            placeholder="Ingrese la contraseña" 
-            value={passwordInput}
-            onChange={(e) => setPasswordInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-            className="text-center h-12 text-lg"
-          />
-          <Button onClick={handleUnlock} className="w-full h-12 text-lg font-bold gap-2">
-            <Unlock className="h-5 w-5" />
-            Desbloquear Plan
-          </Button>
-          <Button asChild variant="ghost" className="w-full">
-            <Link href="/explore">Volver a Explorar</Link>
-          </Button>
+          <Input type="password" placeholder="Ingrese la contraseña" value={passwordInput} onChange={(e) => setPasswordInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleUnlock()} className="text-center h-12 text-lg" />
+          <Button onClick={handleUnlock} className="w-full h-12 text-lg font-bold gap-2"><Unlock className="h-5 w-5" /> Desbloquear Plan</Button>
+          <Button asChild variant="ghost" className="w-full"><Link href="/explore">Volver a Explorar</Link></Button>
         </div>
       </div>
     );
@@ -125,21 +106,31 @@ export default function CirclePlanPage() {
   const IVA_RATE = 1.21;
   const capitalTotal = circle.targetCapital;
   const totalCuotas = circle.totalInstallments;
+  
+  const alicuotaPura = capitalTotal / totalCuotas;
+  
+  // Cargos base
   const adminRate = circle.administrativeFeeRate || 0.10;
   const subRate = circle.subscriptionFeeRate || 0.03;
   const lifeInsRate = circle.lifeInsuranceRate || 0.0009;
 
-  const alicuotaPura = capitalTotal / totalCuotas;
-  const adminFeeMensual = (alicuotaPura * adminRate) * IVA_RATE;
-  const totalSubFee = (capitalTotal * subRate) * IVA_RATE;
+  // Aplicación de IVA según configuración del círculo
+  const adminFeeMensual = circle.adminVatApplied 
+    ? (alicuotaPura * adminRate) * IVA_RATE 
+    : (alicuotaPura * adminRate);
+    
+  const totalSubFee = circle.subscriptionVatApplied 
+    ? (capitalTotal * subRate) * IVA_RATE 
+    : (capitalTotal * subRate);
+
   const installmentsWithSubFee = Math.ceil(totalCuotas * 0.20);
   const proratedSubFee = totalSubFee / installmentsWithSubFee;
 
   const installments = Array.from({ length: totalCuotas }, (_, i) => {
     const num = i + 1;
-    const totalAlicuotasPagasAnterior = alicuotaPura * i;
-    const saldoCapitalPuro = capitalTotal - totalAlicuotasPagasAnterior;
-    const currentInsurance = saldoCapitalPuro * lifeInsRate;
+    const currentSaldo = capitalTotal - (alicuotaPura * i);
+    const rawInsurance = currentSaldo * lifeInsRate;
+    const currentInsurance = circle.lifeInsuranceVatApplied ? rawInsurance * IVA_RATE : rawInsurance;
     const currentSubFee = num <= installmentsWithSubFee ? proratedSubFee : 0;
     const currentTotal = alicuotaPura + adminFeeMensual + currentInsurance + currentSubFee;
     
@@ -150,7 +141,7 @@ export default function CirclePlanPage() {
       currentInsurance,
       currentSubFee, 
       currentTotal,
-      saldoCapitalPuro
+      saldoCapitalPuro: currentSaldo
     };
   });
 
@@ -159,17 +150,13 @@ export default function CirclePlanPage() {
 
   const handleSubscribe = () => {
     if (!user) {
-      toast({ title: "Inicia sesión", description: "Debes estar registrado para unirte a un círculo.", variant: "destructive" });
+      toast({ title: "Inicia sesión", description: "Debes estar registrado para unirte.", variant: "destructive" });
       return;
     }
     if (!db) return;
-    if (isAlreadyMember) {
-      toast({ title: "Ya eres miembro", description: "Ya tienes una suscripción activa para este círculo." });
-      return;
-    }
-    const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
-    if (isFull) {
-      toast({ title: "Círculo Completo", description: "Este grupo ya ha alcanzado su capacidad máxima.", variant: "destructive" });
+    if (isAlreadyMember) return;
+    if ((circle.currentMemberCount || 0) >= circle.memberCapacity) {
+      toast({ title: "Círculo Completo", variant: "destructive" });
       return;
     }
     
@@ -198,11 +185,8 @@ export default function CirclePlanPage() {
     const circleDocRef = doc(db, 'saving_circles', circle.id);
     updateDocumentNonBlocking(circleDocRef, { currentMemberCount: increment(1) });
 
-    toast({ title: "¡Suscripción exitosa!", description: "Has abonado la 1ra cuota correctamente." });
-    
-    setTimeout(() => {
-      router.push('/my-circles');
-    }, 1500);
+    toast({ title: "¡Suscripción exitosa!", description: "Bienvenido al grupo." });
+    setTimeout(() => router.push('/my-circles'), 1500);
   };
 
   const formatCurrency = (val: number) => {
@@ -214,9 +198,7 @@ export default function CirclePlanPage() {
     <div className="max-w-6xl mx-auto space-y-8 pb-20">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" asChild className="rounded-full">
-          <Link href="/explore">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
+          <Link href="/explore"><ArrowLeft className="h-5 w-5" /></Link>
         </Button>
         <h1 className="text-2xl font-bold tracking-tight text-primary">
           {isAlreadyMember ? 'Tu Plan Financiero' : 'Detalle del Plan Financiero'}
@@ -236,11 +218,6 @@ export default function CirclePlanPage() {
                   <Badge className={`${(circle.currentMemberCount || 0) >= circle.memberCapacity ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'} border-none font-bold px-4 py-1`}>
                     {(circle.currentMemberCount || 0) >= circle.memberCapacity ? 'ACTIVO (Completo)' : 'ABIERTO'}
                   </Badge>
-                  {circle.isPrivate && (
-                    <Badge variant="outline" className="gap-1 border-orange-200 text-orange-700 bg-orange-50">
-                      <Lock className="h-3 w-3" /> Privado
-                    </Badge>
-                  )}
                 </div>
               </div>
             </CardHeader>
@@ -248,51 +225,19 @@ export default function CirclePlanPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Miembros</span>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-primary" />
-                    <span className="text-xl font-bold">{circle.currentMemberCount || 0}/{circle.memberCapacity}</span>
-                  </div>
+                  <div className="flex items-center gap-2 font-bold text-xl"><Users className="h-4 w-4 text-primary" /> {circle.currentMemberCount || 0}/{circle.memberCapacity}</div>
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Plazo</span>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    <span className="text-xl font-bold">{totalCuotas} meses</span>
-                  </div>
+                  <div className="flex items-center gap-2 font-bold text-xl"><Calendar className="h-4 w-4 text-primary" /> {totalCuotas} meses</div>
                 </div>
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Cuota Promedio</span>
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4 text-primary" />
-                    <span className="text-xl font-bold">{formatCurrency(cuotaPromedio)}</span>
-                  </div>
+                  <div className="flex items-center gap-2 font-bold text-xl"><DollarSign className="h-4 w-4 text-primary" /> {formatCurrency(cuotaPromedio)}</div>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Vencimientos</span>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <span className="text-xl font-bold">Día 10</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 bg-accent/30 rounded-3xl border border-primary/10">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 font-bold text-primary text-lg">
-                      <Calculator className="h-5 w-5" />
-                      {isAlreadyMember ? 'Resumen Financiero del Plan' : 'Costo Financiero Total (CFT)'}
-                    </div>
-                    <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      Costo total que incluye la administración del grupo y seguros obligatorios durante todo el plazo.
-                    </p>
-                  </div>
-                  <div className="text-center md:text-right">
-                    <div className="text-4xl font-black text-primary">
-                      {(((totalPlanSum - capitalTotal) / capitalTotal) * 100).toFixed(2)}%
-                    </div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Carga Total del Plan</span>
-                  </div>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest block">Carga Total</span>
+                  <div className="flex items-center gap-2 font-bold text-xl text-primary">{(((totalPlanSum - capitalTotal) / capitalTotal) * 100).toFixed(2)}%</div>
                 </div>
               </div>
             </CardContent>
@@ -300,10 +245,7 @@ export default function CirclePlanPage() {
 
           <Card className="border-none shadow-sm bg-white overflow-hidden">
             <CardHeader>
-              <CardTitle className="text-xl font-bold">
-                {isAlreadyMember ? 'Tu Plan de' : 'Proyección de'} {totalCuotas} Cuotas
-              </CardTitle>
-              <CardDescription>Resumen de cuotas mensuales con cargos administrativos desglosados.</CardDescription>
+              <CardTitle className="text-xl font-bold">{isAlreadyMember ? 'Tu Plan de' : 'Proyección de'} {totalCuotas} Cuotas</CardTitle>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[600px] w-full pr-4">
@@ -311,94 +253,31 @@ export default function CirclePlanPage() {
                   <TableHeader className="bg-muted/50 sticky top-0 z-10">
                     <TableRow>
                       <TableHead className="font-bold">Cuota</TableHead>
-                      <TableHead className="font-bold">Saldo Capital Puro</TableHead>
+                      <TableHead className="font-bold">Saldo Capital</TableHead>
                       <TableHead className="font-bold">Total Mensual</TableHead>
-                      <TableHead className="font-bold text-right">Detalle</TableHead>
+                      <TableHead className="font-bold text-right">Acción</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {installments.map((inst) => {
                       const isPaid = inst.num <= paidCount;
                       return (
-                        <TableRow 
-                          key={inst.num} 
-                          className={cn(
-                            "hover:bg-accent/10 transition-colors",
-                            isPaid && "bg-green-50/50"
-                          )}
-                        >
-                          <TableCell className="font-bold">
-                            <div className="flex items-center gap-2">
-                              #{inst.num}
-                              {isPaid && (
-                                <Badge variant="outline" className="bg-green-100 text-green-700 border-none text-[10px] py-0 h-5 font-bold">
-                                  Pagada
-                                </Badge>
-                              )}
-                            </div>
-                          </TableCell>
+                        <TableRow key={inst.num} className={cn("hover:bg-accent/10 transition-colors", isPaid && "bg-green-50/50")}>
+                          <TableCell className="font-bold">#{inst.num} {isPaid && <Badge variant="outline" className="ml-2 bg-green-100 text-green-700 border-none">Pagada</Badge>}</TableCell>
                           <TableCell className="text-muted-foreground text-xs">{formatCurrency(inst.saldoCapitalPuro)}</TableCell>
                           <TableCell className="font-bold text-primary">{formatCurrency(inst.currentTotal)}</TableCell>
                           <TableCell className="text-right">
                             <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="ghost" size="sm" className="text-xs gap-1 font-bold h-7 hover:bg-primary/10 text-primary">
-                                  <Info className="h-3 w-3" />
-                                  Ver Desglose
-                                </Button>
-                              </DialogTrigger>
+                              <DialogTrigger asChild><Button variant="ghost" size="sm" className="text-xs font-bold h-7 text-primary">Detalles</Button></DialogTrigger>
                               <DialogContent className="max-w-md">
-                                <DialogHeader>
-                                  <DialogTitle className="text-primary">Desglose de Cuota #{inst.num}</DialogTitle>
-                                </DialogHeader>
+                                <DialogTitle>Desglose Cuota #{inst.num}</DialogTitle>
                                 <div className="space-y-4 py-4">
-                                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
-                                    <span className="text-sm font-medium">Alícuota Pura (Capital)</span>
-                                    <span className="font-bold">{formatCurrency(alicuotaPura)}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
-                                    <div className="flex flex-col">
-                                      <span className="text-sm font-medium">Gastos Administrativos (+ IVA)</span>
-                                      <span className="text-[10px] text-muted-foreground">{(adminRate * 100).toFixed(1)}% de la alícuota + 21% IVA</span>
-                                    </div>
-                                    <span className="font-bold">{formatCurrency(adminFeeMensual)}</span>
-                                  </div>
-                                  <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
-                                    <div className="flex flex-col">
-                                      <span className="text-sm font-medium">Seguro de Vida</span>
-                                      <span className="text-[10px] text-muted-foreground">{(lifeInsRate * 100).toFixed(2)}% sobre saldo { formatCurrency(inst.saldoCapitalPuro) }</span>
-                                    </div>
-                                    <span className="font-bold">{formatCurrency(inst.currentInsurance)}</span>
-                                  </div>
-                                  {inst.currentSubFee > 0 && (
-                                    <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/20">
-                                      <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-primary">Derecho Suscripción (+ IVA)</span>
-                                        <span className="text-[10px] text-primary/70">Prorrateo {inst.num} de {installmentsWithSubFee} cuotas + 21% IVA</span>
-                                      </div>
-                                      <span className="font-bold text-primary">{formatCurrency(inst.currentSubFee)}</span>
-                                    </div>
-                                  )}
-                                  <div className="border-t pt-4 flex justify-between items-center">
-                                    <span className="text-lg font-bold">Total Mensual</span>
-                                    <span className="text-2xl font-black text-primary">{formatCurrency(inst.currentTotal)}</span>
-                                  </div>
-                                  {isPaid && (
-                                    <div className="pt-4 flex flex-col gap-4 border-t mt-4">
-                                      <div className="flex items-center justify-center gap-2 text-green-600 font-bold text-sm">
-                                        <CheckCircle className="h-4 w-4" />
-                                        Cuota Abonada Correctamente
-                                      </div>
-                                      <Button 
-                                        variant="outline" 
-                                        className="w-full gap-2 font-bold border-primary text-primary hover:bg-primary/5"
-                                        onClick={() => handleDownloadReceipt(inst.num)}
-                                      >
-                                        <Download className="h-4 w-4" />
-                                        Descargar Recibo
-                                      </Button>
-                                    </div>
-                                  )}
+                                  <div className="flex justify-between p-3 bg-muted/50 rounded-xl"><span>Alícuota Pura</span> <span className="font-bold">{formatCurrency(alicuotaPura)}</span></div>
+                                  <div className="flex justify-between p-3 bg-muted/50 rounded-xl"><span>Gastos Admin. {circle.adminVatApplied ? '(+IVA)' : ''}</span> <span className="font-bold">{formatCurrency(inst.adminFeeMensual)}</span></div>
+                                  <div className="flex justify-between p-3 bg-muted/50 rounded-xl"><span>Seguro Vida {circle.lifeInsuranceVatApplied ? '(+IVA)' : ''}</span> <span className="font-bold">{formatCurrency(inst.currentInsurance)}</span></div>
+                                  {inst.currentSubFee > 0 && <div className="flex justify-between p-3 bg-primary/10 rounded-xl border border-primary/20"><span>Derecho Suscrip. {circle.subscriptionVatApplied ? '(+IVA)' : ''}</span> <span className="font-bold text-primary">{formatCurrency(inst.currentSubFee)}</span></div>}
+                                  <div className="border-t pt-4 flex justify-between"> <span className="text-lg font-bold">Total</span> <span className="text-2xl font-black text-primary">{formatCurrency(inst.currentTotal)}</span></div>
+                                  {isPaid && <Button variant="outline" className="w-full gap-2 border-primary text-primary mt-4" onClick={() => handleDownloadReceipt(inst.num)}><Download className="h-4 w-4" /> Descargar Recibo</Button>}
                                 </div>
                               </DialogContent>
                             </Dialog>
@@ -416,42 +295,15 @@ export default function CirclePlanPage() {
         <div className="space-y-6">
           <Card className={`border-none shadow-xl ${isAlreadyMember ? 'bg-muted text-muted-foreground' : 'bg-primary text-white'} sticky top-8 transition-colors`}>
             <CardHeader className="pb-4">
-              <CardTitle className="text-xl font-bold flex items-center gap-2">
-                {isAlreadyMember ? <CheckCircle className="h-6 w-6" /> : <ShieldCheck className="h-6 w-6" />}
-                {isAlreadyMember ? 'Membresía Activa' : 'Suscripción en USD'}
-              </CardTitle>
+              <CardTitle className="text-xl font-bold flex items-center gap-2">{isAlreadyMember ? <CheckCircle className="h-6 w-6" /> : <ShieldCheck className="h-6 w-6" />} {isAlreadyMember ? 'Membresía Activa' : 'Suscripción'}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
-                <div className={`flex justify-between items-center text-sm p-3 rounded-xl ${isAlreadyMember ? 'bg-white/50' : 'bg-white/10'}`}>
-                  <span className="font-medium">Abono Inicial (1ra Cuota)</span>
-                  <span className="font-bold text-lg">{formatCurrency(installments[0].currentTotal)}</span>
-                </div>
-                <div className={`flex justify-between items-center text-sm p-3 rounded-xl ${isAlreadyMember ? 'bg-white/50' : 'bg-white/10'}`}>
-                  <span className="font-medium">Capital a Adjudicar</span>
-                  <span className="font-bold text-lg">{formatCurrency(capitalTotal)}</span>
-                </div>
+                <div className={`flex justify-between items-center text-sm p-3 rounded-xl ${isAlreadyMember ? 'bg-white/50' : 'bg-white/10'}`}><span>Abono Inicial</span> <span className="font-bold text-lg">{formatCurrency(installments[0].currentTotal)}</span></div>
+                <div className={`flex justify-between items-center text-sm p-3 rounded-xl ${isAlreadyMember ? 'bg-white/50' : 'bg-white/10'}`}><span>Capital a Adjudicar</span> <span className="font-bold text-lg">{formatCurrency(capitalTotal)}</span></div>
               </div>
-
-              <div className={`p-4 rounded-xl text-[10px] leading-relaxed ${isAlreadyMember ? 'bg-white/50 text-muted-foreground' : 'bg-white/10 text-white/80'}`}>
-                <p><strong>Nota legal:</strong> Al suscribirse usted acepta los términos y condiciones del contrato de adhesión del círculo de ahorro colaborativo.</p>
-              </div>
-
-              <Button 
-                variant={isAlreadyMember ? "outline" : "secondary"}
-                className="w-full h-14 text-lg font-bold shadow-lg"
-                onClick={handleSubscribe}
-                disabled={isSubscribing || (circle.currentMemberCount || 0) >= circle.memberCapacity || isAlreadyMember}
-              >
-                {isSubscribing ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                ) : isAlreadyMember ? (
-                  'Ya eres miembro'
-                ) : (circle.currentMemberCount || 0) >= circle.memberCapacity ? (
-                  'Círculo Completo'
-                ) : (
-                  'Abonar 1ra Cuota y Unirme'
-                )}
+              <Button variant={isAlreadyMember ? "outline" : "secondary"} className="w-full h-14 text-lg font-bold shadow-lg" onClick={handleSubscribe} disabled={isSubscribing || (circle.currentMemberCount || 0) >= circle.memberCapacity || isAlreadyMember}>
+                {isSubscribing ? <Loader2 className="animate-spin" /> : isAlreadyMember ? 'Ya eres miembro' : 'Abonar 1ra Cuota'}
               </Button>
             </CardContent>
           </Card>
