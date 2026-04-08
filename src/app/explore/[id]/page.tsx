@@ -35,7 +35,6 @@ export default function CirclePlanPage() {
   const circleRef = useMemoFirebase(() => (db && params.id ? doc(db, 'saving_circles', params.id as string) : null), [db, params.id]);
   const { data: circle, isLoading: circleLoading } = useDoc(circleRef);
 
-  // Verificar si el usuario ya es miembro
   const membershipQuery = useMemoFirebase(() => {
     if (!db || !user || !params.id) return null;
     return query(
@@ -69,7 +68,6 @@ export default function CirclePlanPage() {
       title: "Generando recibo...",
       description: `El recibo de la cuota #${num} se descargará en breve.`,
     });
-    // Simulación de descarga
     setTimeout(() => {
       toast({
         title: "Descarga completada",
@@ -124,6 +122,7 @@ export default function CirclePlanPage() {
     );
   }
 
+  const IVA_RATE = 1.21;
   const capitalTotal = circle.targetCapital;
   const totalCuotas = circle.totalInstallments;
   const adminRate = circle.administrativeFeeRate || 0.10;
@@ -131,8 +130,8 @@ export default function CirclePlanPage() {
   const lifeInsRate = circle.lifeInsuranceRate || 0.0009;
 
   const alicuotaPura = capitalTotal / totalCuotas;
-  const adminFeeMensual = alicuotaPura * adminRate;
-  const totalSubFee = capitalTotal * subRate;
+  const adminFeeMensual = (alicuotaPura * adminRate) * IVA_RATE;
+  const totalSubFee = (capitalTotal * subRate) * IVA_RATE;
   const installmentsWithSubFee = Math.ceil(totalCuotas * 0.20);
   const proratedSubFee = totalSubFee / installmentsWithSubFee;
 
@@ -183,7 +182,7 @@ export default function CirclePlanPage() {
       savingCircleAdminUserId: circle.adminUserId,
       joiningDate: new Date().toISOString(),
       status: 'Active',
-      paidInstallmentsCount: 1, // Se abona la primera al suscribirse
+      paidInstallmentsCount: 1, 
       capitalPaid: alicuotaPura,
       outstandingCapitalBalance: capitalTotal - alicuotaPura,
       adjudicationStatus: 'Pending',
@@ -285,14 +284,14 @@ export default function CirclePlanPage() {
                       {isAlreadyMember ? 'Resumen Financiero del Plan' : 'Costo Financiero Total (CFT)'}
                     </div>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      La 1ra cuota se abona al suscribirse. La 2da cuota vence el día 10 posterior a los 30 días de suscripción.
+                      La 1ra cuota se abona al suscribirse e incluye IVA (21%) sobre conceptos administrativos.
                     </p>
                   </div>
                   <div className="text-center md:text-right">
                     <div className="text-4xl font-black text-primary">
                       {(((totalPlanSum - capitalTotal) / capitalTotal) * 100).toFixed(2)}%
                     </div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Carga Total del Plan</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Carga Total (incl. IVA)</span>
                   </div>
                 </div>
               </div>
@@ -304,7 +303,7 @@ export default function CirclePlanPage() {
               <CardTitle className="text-xl font-bold">
                 {isAlreadyMember ? 'Tu Plan de' : 'Proyección de'} {totalCuotas} Cuotas
               </CardTitle>
-              <CardDescription>Seguro de vida decreciente según saldo de capital puro.</CardDescription>
+              <CardDescription>Valores finales con IVA (21%) incluido en gastos administrativos.</CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[600px] w-full pr-4">
@@ -359,23 +358,23 @@ export default function CirclePlanPage() {
                                   </div>
                                   <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
                                     <div className="flex flex-col">
-                                      <span className="text-sm font-medium">Gastos Administrativos</span>
-                                      <span className="text-[10px] text-muted-foreground">{(adminRate * 100).toFixed(1)}% de la alícuota</span>
+                                      <span className="text-sm font-medium">Gastos Administrativos (+ IVA)</span>
+                                      <span className="text-[10px] text-muted-foreground">{(adminRate * 100).toFixed(1)}% de la alícuota + 21% IVA</span>
                                     </div>
                                     <span className="font-bold">{formatCurrency(adminFeeMensual)}</span>
                                   </div>
                                   <div className="flex justify-between items-center p-3 bg-muted/50 rounded-xl">
                                     <div className="flex flex-col">
                                       <span className="text-sm font-medium">Seguro de Vida</span>
-                                      <span className="text-[10px] text-muted-foreground">{(lifeInsRate * 100).toFixed(2)}% sobre saldo puro { formatCurrency(inst.saldoCapitalPuro) }</span>
+                                      <span className="text-[10px] text-muted-foreground">{(lifeInsRate * 100).toFixed(2)}% sobre saldo { formatCurrency(inst.saldoCapitalPuro) }</span>
                                     </div>
-                                    <span className="font-bold">{formatCurrency(adminFeeMensual)}</span>
+                                    <span className="font-bold">{formatCurrency(inst.currentInsurance)}</span>
                                   </div>
                                   {inst.currentSubFee > 0 && (
                                     <div className="flex justify-between items-center p-3 bg-primary/10 rounded-xl border border-primary/20">
                                       <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-primary">Derecho de Suscripción</span>
-                                        <span className="text-[10px] text-primary/70">Prorrateo {inst.num} de {installmentsWithSubFee} cuotas</span>
+                                        <span className="text-sm font-bold text-primary">Derecho Suscripción (+ IVA)</span>
+                                        <span className="text-[10px] text-primary/70">Prorrateo {inst.num} de {installmentsWithSubFee} cuotas + 21% IVA</span>
                                       </div>
                                       <span className="font-bold text-primary">{formatCurrency(inst.currentSubFee)}</span>
                                     </div>
@@ -435,7 +434,7 @@ export default function CirclePlanPage() {
               </div>
 
               <div className={`p-4 rounded-xl text-[10px] leading-relaxed ${isAlreadyMember ? 'bg-white/50 text-muted-foreground' : 'bg-white/10 text-white/80'}`}>
-                <p><strong>Nota:</strong> Al suscribirse se abona la primera cuota. Las cuotas subsiguientes vencen los días 10 de cada mes, siempre que hayan transcurrido al menos 30 días desde la suscripción.</p>
+                <p><strong>Nota IVA:</strong> Los gastos administrativos y derechos de suscripción incluyen IVA del 21% según normativa vigente.</p>
               </div>
 
               <Button 
@@ -454,11 +453,6 @@ export default function CirclePlanPage() {
                   'Abonar 1ra Cuota y Unirme'
                 )}
               </Button>
-              {isAlreadyMember && (
-                <p className="text-xs text-center font-medium animate-in fade-in slide-in-from-top-2">
-                  Puedes gestionar tu plan en la sección "Mis Círculos"
-                </p>
-              )}
             </CardContent>
           </Card>
         </div>

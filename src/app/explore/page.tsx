@@ -66,12 +66,12 @@ export default function ExplorePage() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
           {filteredCircles.map((circle) => {
+            const IVA_RATE = 1.21;
             const n = circle.totalInstallments;
             const alicuota = circle.targetCapital / n;
-            const adminFee = alicuota * (circle.administrativeFeeRate || 0.10);
-            const subFeeTotal = circle.targetCapital * (circle.subscriptionFeeRate || 0.03);
+            const adminFee = (alicuota * (circle.administrativeFeeRate || 0.10)) * IVA_RATE;
+            const subFeeTotal = (circle.targetCapital * (circle.subscriptionFeeRate || 0.03)) * IVA_RATE;
             
-            // Suma del seguro de vida decreciente: rate * capital * (n + 1) / 2
             const insuranceSum = (circle.lifeInsuranceRate || 0.0009) * circle.targetCapital * (n + 1) / 2;
             
             const totalPlanCost = circle.targetCapital + (n * adminFee) + subFeeTotal + insuranceSum;
@@ -124,7 +124,7 @@ export default function ExplorePage() {
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs space-y-1">
                               <p className="text-xs font-bold">Cuota Promedio Estimada:</p>
-                              <p className="text-[10px] leading-relaxed">Resultado de dividir el costo total del plan (Capital + Gastos + Seguros) por {n} meses.</p>
+                              <p className="text-[10px] leading-relaxed">Incluye Alícuota + Gastos Admin + Derecho de Suscripción + Seguro de Vida + IVA (21%).</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>

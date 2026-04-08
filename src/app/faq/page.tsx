@@ -1,8 +1,13 @@
+
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { HelpCircle, MessageSquare } from "lucide-react"
 
 export default function FAQPage() {
   const faqs = [
+    {
+      q: "¿Cómo se compone mi cuota mensual?",
+      a: "Tu cuota se compone de: 1) Alícuota Pura (valor del capital dividido el plazo), 2) Gastos Administrativos + IVA (21%), 3) Derecho de Suscripción + IVA (21%) (prorrateado en las primeras cuotas), y 4) Seguro de Vida decreciente sobre el saldo de capital pendiente."
+    },
     {
       q: "¿Qué pasa si alguien deja de pagar?",
       a: "Contamos con un fondo de garantía y un proceso legal riguroso. Cada miembro firma un contrato vinculante. En caso de impago, el fondo de garantía cubre la cuota temporalmente mientras se ejecutan las medidas de recuperación."
@@ -13,15 +18,15 @@ export default function FAQPage() {
     },
     {
       q: "¿Es seguro mi dinero?",
-      a: "Sí, operamos bajo regulaciones financieras vigentes y utilizamos cuentas bancarias segregadas. Además, todos los participantes pasan por un proceso de verificación de identidad (KYC)."
+      a: "Sí, operamos bajo regulaciones financieras vigentes y utilizamos cuentas bancarias segregadas. Además, todos los participantes pasan por un proceso de verificación de identidad (KYC) y el respaldo de un contrato legal."
     },
     {
       q: "¿Puedo retirarme antes de que termine el círculo?",
-      a: "Depende del reglamento específico de cada círculo. Generalmente, se permite si encuentras a un sustituto que asuma tus compromisos y beneficios, sujeto a aprobación administrativa."
+      a: "Depende del reglamento específico de cada círculo. Generalmente, se permite si encuentras a un sustituto que asuma tus compromisos y beneficios, sujeto a aprobación administrativa y validación de antecedentes."
     },
     {
-      q: "¿Hay comisiones de gestión?",
-      a: "Sí, aplicamos una pequeña comisión administrativa mensual que ya viene incluida en la cuota detallada en cada círculo. Esto cubre la plataforma, seguros y gestiones legales."
+      q: "¿Las cuotas son fijas?",
+      a: "Las cuotas se calculan en USD y se abonan en dicha moneda o su equivalente, asegurando que el capital final no pierda valor adquisitivo durante el plazo de ahorro."
     }
   ]
 
@@ -29,10 +34,10 @@ export default function FAQPage() {
     <div className="max-w-4xl mx-auto space-y-12">
       <div className="text-center space-y-4">
         <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-accent text-primary mb-2">
-          <HelpCircle className="h-10 w-10" />
+          <HelpCircle className="h-10 we-10" />
         </div>
         <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Preguntas Frecuentes</h1>
-        <p className="text-lg text-muted-foreground">Todo lo que necesitas saber sobre los círculos de ahorro.</p>
+        <p className="text-lg text-muted-foreground">Todo lo que necesitas saber sobre los círculos de ahorro y su transparencia financiera.</p>
       </div>
 
       <div className="bg-white rounded-3xl p-6 md:p-10 shadow-sm border border-border">
@@ -57,7 +62,7 @@ export default function FAQPage() {
           </div>
           <div>
             <h3 className="font-bold text-lg">¿Aún tienes dudas?</h3>
-            <p className="text-muted-foreground text-sm">Nuestro equipo de soporte está listo para ayudarte.</p>
+            <p className="text-muted-foreground text-sm">Nuestro equipo de soporte está listo para ayudarte con tu plan.</p>
           </div>
         </div>
         <a 
