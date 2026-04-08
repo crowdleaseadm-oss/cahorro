@@ -19,7 +19,8 @@ import {
   Loader2,
   TrendingUp,
   BarChart3,
-  ArrowRight
+  ArrowRight,
+  Info
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -31,7 +32,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useFirestore, useCollection, useMemoFirebase, useUser, useAuth } from '@/firebase';
 import { collection, serverTimestamp, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -56,7 +57,10 @@ export default function AdminPage() {
   const circlesRef = useMemoFirebase(() => (db ? collection(db, 'saving_circles') : null), [db]);
   const { data: circlesList, isLoading: circlesLoading } = useCollection(circlesRef);
 
-  // 1. Cálculos de Salud Financiera
+  // Constantes impositivas
+  const IVA_RATE = 1.21;
+
+  // 1. Cálculos de Salud Financiera con IVA
   const financialStats = useMemo(() => {
     if (!circlesList) return { subIncome: 0, adminFees: 0, activeMembers: 0 };
     
@@ -65,19 +69,26 @@ export default function AdminPage() {
       : circlesList.filter(c => c.id === selectedCircleFilter);
 
     return filtered.reduce((acc, circle) => {
-      const subIncome = circle.targetCapital * (circle.subscriptionFeeRate || 0.03);
+      // Ingreso por Suscripción (One-time) + IVA
+      const subRate = circle.subscriptionFeeRate || 0.03;
+      const subIncomeBase = circle.targetCapital * subRate;
+      const subIncomeWithIVA = subIncomeBase * IVA_RATE;
+
+      // Gastos Administrativos Mensuales (Recurrente) + IVA
       const alicuota = circle.targetCapital / circle.totalInstallments;
-      const adminFeeMensual = alicuota * (circle.administrativeFeeRate || 0.10) * (circle.currentMemberCount || 0);
+      const adminRate = circle.administrativeFeeRate || 0.10;
+      const adminFeeBase = alicuota * adminRate * (circle.currentMemberCount || 0);
+      const adminFeeWithIVA = adminFeeBase * IVA_RATE;
       
       return {
-        subIncome: acc.subIncome + subIncome,
-        adminFees: acc.adminFees + adminFeeMensual,
+        subIncome: acc.subIncome + subIncomeWithIVA,
+        adminFees: acc.adminFees + adminFeeWithIVA,
         activeMembers: acc.activeMembers + (circle.currentMemberCount || 0)
       };
     }, { subIncome: 0, adminFees: 0, activeMembers: 0 });
   }, [circlesList, selectedCircleFilter]);
 
-  // 2. Fetch Members for Selected Circle (Only if a specific one is selected)
+  // 2. Fetch Members for Selected Circle
   const selectedCircleMembersRef = useMemoFirebase(() => {
     if (!db || selectedCircleFilter === 'all') return null;
     return collection(db, 'saving_circles', selectedCircleFilter, 'members');
@@ -154,9 +165,9 @@ export default function AdminPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
             <ShieldCheck className="h-8 w-8 text-primary" />
-            Salud Financiera
+            Salud Financiera (Bruta)
           </h1>
-          <p className="text-muted-foreground mt-1">Supervisión global de ingresos y suscripciones.</p>
+          <p className="text-muted-foreground mt-1">Supervisión de ingresos con IVA (21%) incluido.</p>
         </div>
         <div className="flex items-center gap-3">
           <Select value={selectedCircleFilter} onValueChange={setSelectedCircleFilter}>
@@ -179,25 +190,34 @@ export default function AdminPage() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
-               {/* Formulario de creación (se mantiene similar al anterior para consistencia) */}
                <DialogHeader>
                 <DialogTitle>Configurar Nuevo Círculo</DialogTitle>
-                <DialogDescription>ID LLLLNNNN (ej. AAAA0001).</DialogDescription>
+                <DialogDescription>El ID será generado automáticamente con formato AAAA0001.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-6 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Nombre del Círculo</Label>
-                    <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                    <Input value={formData.name} placeholder="Ej. Círculo Inmobiliario I" onChange={(e) => setFormData({...formData, name: e.target.value})} />
                   </div>
                   <div className="space-y-2">
                     <Label>Capital Suscripto (USD)</Label>
                     <Input type="number" step="5000" value={formData.targetCapital} onChange={(e) => setFormData({...formData, targetCapital: Number(e.target.value)})} />
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Gasto Admin (%)</Label>
+                    <Input type="number" step="0.01" value={formData.administrativeFeeRate} onChange={(e) => setFormData({...formData, administrativeFeeRate: Number(e.target.value)})} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Derecho Suscrip. (%)</Label>
+                    <Input type="number" step="0.01" value={formData.subscriptionFeeRate} onChange={(e) => setFormData({...formData, subscriptionFeeRate: Number(e.target.value)})} />
+                  </div>
+                </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleCreateCircle}>Crear</Button>
+                <Button onClick={handleCreateCircle}>Crear Círculo</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -205,24 +225,40 @@ export default function AdminPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="border-none shadow-sm bg-primary text-primary-foreground">
+        <Card className="border-none shadow-sm bg-primary text-primary-foreground relative overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider opacity-80">Ingresos x Suscripción</CardTitle>
+            <CardTitle className="text-xs font-bold uppercase tracking-wider opacity-80 flex items-center gap-1">
+              Suscripciones (+ IVA)
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
+                  <TooltipContent><p className="text-[10px]">Total estimado de ingresos por derecho de ingreso incluyendo IVA 21%.</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardTitle>
             <TrendingUp className="h-4 w-4 opacity-80" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${financialStats.subIncome.toLocaleString()}</div>
-            <p className="text-[10px] opacity-70 mt-1">Estimado total de ingresos por derecho de ingreso.</p>
+            <div className="text-2xl font-bold">${financialStats.subIncome.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <p className="text-[10px] opacity-70 mt-1">Estimado total bruto (Facturación por altas).</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-white">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Gastos Administrativos</CardTitle>
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              Gtos. Administrativos (+ IVA)
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger><Info className="h-3 w-3" /></TooltipTrigger>
+                  <TooltipContent><p className="text-[10px]">Ingreso mensual recurrente por gestión con IVA 21%.</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </CardTitle>
             <BarChart3 className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">${financialStats.adminFees.toLocaleString()}</div>
-            <p className="text-[10px] text-muted-foreground mt-1">Estimado mensual recurrente (MRR).</p>
+            <div className="text-2xl font-bold text-primary">${financialStats.adminFees.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <p className="text-[10px] text-muted-foreground mt-1">Estimado mensual bruto (Facturación recurrente).</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-white">
@@ -240,7 +276,7 @@ export default function AdminPage() {
       {selectedCircleFilter === 'all' ? (
         <Card className="border-none shadow-sm bg-white">
           <CardHeader>
-            <CardTitle className="text-lg">Resumen de Círculos</CardTitle>
+            <CardTitle className="text-lg">Resumen de Círculos (Valores con IVA 21%)</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -248,8 +284,8 @@ export default function AdminPage() {
                 <TableRow>
                   <TableHead>ID / Nombre</TableHead>
                   <TableHead>Capital</TableHead>
-                  <TableHead>Suscripción (Est.)</TableHead>
-                  <TableHead>Gto. Admin (Est.)</TableHead>
+                  <TableHead>Suscripción (+IVA)</TableHead>
+                  <TableHead>Gto. Admin (+IVA)</TableHead>
                   <TableHead>Miembros</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
@@ -257,29 +293,35 @@ export default function AdminPage() {
               <TableBody>
                 {circlesLoading ? (
                   <TableRow><TableCell colSpan={6} className="text-center py-4">Cargando...</TableCell></TableRow>
-                ) : circlesList?.map((circle) => (
-                  <TableRow key={circle.id}>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="font-mono text-[10px] font-bold text-primary">{circle.id}</span>
-                        <span className="text-xs font-medium">{circle.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs font-bold">${circle.targetCapital.toLocaleString()}</TableCell>
-                    <TableCell className="text-xs">${(circle.targetCapital * (circle.subscriptionFeeRate || 0.03)).toLocaleString()}</TableCell>
-                    <TableCell className="text-xs text-primary font-bold">
-                      ${((circle.targetCapital / circle.totalInstallments) * (circle.administrativeFeeRate || 0.10) * (circle.currentMemberCount || 0)).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-[10px]">{circle.currentMemberCount || 0} / {circle.memberCapacity}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" asChild>
-                        <Link href={`/admin/circles/${circle.id}`}><ArrowRight className="h-4 w-4" /></Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                ) : circlesList?.map((circle) => {
+                  const alicuota = circle.targetCapital / circle.totalInstallments;
+                  const adminFeeMensual = alicuota * (circle.administrativeFeeRate || 0.10) * (circle.currentMemberCount || 0);
+                  const subIncomeTotal = circle.targetCapital * (circle.subscriptionFeeRate || 0.03);
+
+                  return (
+                    <TableRow key={circle.id}>
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-mono text-[10px] font-bold text-primary">{circle.id}</span>
+                          <span className="text-xs font-medium">{circle.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-bold">${circle.targetCapital.toLocaleString()}</TableCell>
+                      <TableCell className="text-xs">${(subIncomeTotal * IVA_RATE).toLocaleString(undefined, { maximumFractionDigits: 0 })}</TableCell>
+                      <TableCell className="text-xs text-primary font-bold">
+                        ${(adminFeeMensual * IVA_RATE).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px]">{circle.currentMemberCount || 0} / {circle.memberCapacity}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" asChild>
+                          <Link href={`/admin/circles/${circle.id}`}><ArrowRight className="h-4 w-4" /></Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
