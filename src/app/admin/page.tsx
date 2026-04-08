@@ -19,7 +19,8 @@ import {
   Edit2,
   Mail,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Settings2
 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -144,10 +145,9 @@ export default function AdminPage() {
     if (!db || !selectedCircle) return;
     const circleRef = doc(db, 'saving_circles', selectedCircle.id);
     updateDocumentNonBlocking(circleRef, {
-      name: formData.name,
-      targetCapital: formData.targetCapital,
-      isPrivate: formData.isPrivate,
-      password: formData.password
+      ...formData,
+      installmentValue: formData.targetCapital / formData.totalInstallments,
+      memberCapacity: formData.totalInstallments * (formData.drawMethodCount + formData.bidMethodCount)
     });
     setIsEditOpen(false);
     toast({ title: "Círculo Actualizado", description: selectedCircle.id });
@@ -343,7 +343,18 @@ export default function AdminPage() {
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full text-muted-foreground hover:text-primary hover:bg-primary/10" onClick={() => { 
                               setSelectedCircle(circle); 
-                              setFormData({ ...circle });
+                              setFormData({ 
+                                name: circle.name,
+                                targetCapital: circle.targetCapital,
+                                totalInstallments: circle.totalInstallments,
+                                subscriptionFeeRate: circle.subscriptionFeeRate,
+                                administrativeFeeRate: circle.administrativeFeeRate,
+                                lifeInsuranceRate: circle.lifeInsuranceRate,
+                                drawMethodCount: circle.drawMethodCount,
+                                bidMethodCount: circle.bidMethodCount,
+                                isPrivate: circle.isPrivate,
+                                password: circle.password || '',
+                              });
                               setIsEditOpen(true); 
                             }}>
                               <Edit2 className="h-4 w-4" />
@@ -376,79 +387,128 @@ export default function AdminPage() {
       
       {/* Crear Círculo */}
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh] rounded-3xl">
+        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               <Plus className="h-6 w-6 text-primary" />
               Configurar Nuevo Círculo
             </DialogTitle>
-            <DialogDescription>Los parámetros financieros se aplicarán a todos los nuevos miembros.</DialogDescription>
+            <DialogDescription>Defina los parámetros financieros y operativos del grupo.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 py-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
-                <Input value={formData.name} placeholder="Ej. Círculo Inmobiliario I" onChange={(e) => setFormData({...formData, name: e.target.value})} />
+          <div className="grid gap-6 py-4">
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
+                <PiggyBank className="h-4 w-4" /> Configuración General
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre del Círculo</Label>
+                  <Input value={formData.name} placeholder="Ej. Círculo Gold I" onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Capital Suscripto (USD)</Label>
+                  <Input type="number" step="5000" value={formData.targetCapital} onChange={(e) => setFormData({...formData, targetCapital: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Plazo (Cuotas)</Label>
+                  <Input type="number" value={formData.totalInstallments} onChange={(e) => setFormData({...formData, totalInstallments: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Acceso</Label>
+                  <div className="flex items-center gap-3 h-10 px-3 bg-muted/30 rounded-lg">
+                    <input type="checkbox" checked={formData.isPrivate} onChange={(e) => setFormData({...formData, isPrivate: e.target.checked})} className="h-4 w-4 rounded border-primary text-primary" />
+                    <span className="text-sm font-medium">Privado con contraseña</span>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Capital Suscripto (USD)</Label>
-                <Input type="number" step="5000" value={formData.targetCapital} onChange={(e) => setFormData({...formData, targetCapital: Number(e.target.value)})} />
-              </div>
+              {formData.isPrivate && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Contraseña de Acceso</Label>
+                  <Input type="text" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Plazo (Cuotas)</Label>
-                <Input type="number" value={formData.totalInstallments} onChange={(e) => setFormData({...formData, totalInstallments: Number(e.target.value)})} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Acceso Privado</Label>
-                <div className="flex items-center gap-3 h-10 px-3 bg-muted/30 rounded-lg">
-                  <input type="checkbox" checked={formData.isPrivate} onChange={(e) => setFormData({...formData, isPrivate: e.target.checked})} className="h-4 w-4 rounded border-primary text-primary" />
-                  <span className="text-sm font-medium">Requiere Contraseña</span>
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
+                <Settings2 className="h-4 w-4" /> Parámetros y Porcentajes
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Suscripción (%)</Label>
+                  <Input type="number" step="0.01" value={formData.subscriptionFeeRate} onChange={(e) => setFormData({...formData, subscriptionFeeRate: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Admin (%)</Label>
+                  <Input type="number" step="0.01" value={formData.administrativeFeeRate} onChange={(e) => setFormData({...formData, administrativeFeeRate: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Seguro Vida (%)</Label>
+                  <Input type="number" step="0.0001" value={formData.lifeInsuranceRate} onChange={(e) => setFormData({...formData, lifeInsuranceRate: Number(e.target.value)})} />
                 </div>
               </div>
             </div>
-            {formData.isPrivate && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Contraseña de Acceso</Label>
-                <Input type="text" placeholder="Establecer contraseña" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold flex items-center gap-2 text-primary uppercase tracking-wider">
+                <Users className="h-4 w-4" /> Métodos de Adjudicación
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Sorteos por Mes</Label>
+                  <Input type="number" min="1" max="5" value={formData.drawMethodCount} onChange={(e) => setFormData({...formData, drawMethodCount: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Licitaciones por Mes</Label>
+                  <Input type="number" min="1" max="5" value={formData.bidMethodCount} onChange={(e) => setFormData({...formData, bidMethodCount: Number(e.target.value)})} />
+                </div>
               </div>
-            )}
+            </div>
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 pt-4 border-t">
             <Button variant="ghost" onClick={() => setIsCreateOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreateCircle} className="px-8">Crear Grupo Administrativo</Button>
+            <Button onClick={handleCreateCircle} className="px-8 shadow-lg shadow-primary/20">Generar Círculo Administrativo</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Editar Círculo */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl rounded-3xl">
+        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh] rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold flex items-center gap-2">
               <Edit2 className="h-6 w-6 text-primary" />
               Editar Círculo {selectedCircle?.id}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-6 py-6">
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
-              <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Capital (USD)</Label>
-                <Input type="number" value={formData.targetCapital} onChange={(e) => setFormData({...formData, targetCapital: Number(e.target.value)})} />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase text-muted-foreground">Contraseña</Label>
-                <Input value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
-              </div>
-            </div>
+          <div className="grid gap-6 py-4">
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Nombre</Label>
+                  <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Capital (USD)</Label>
+                  <Input type="number" value={formData.targetCapital} onChange={(e) => setFormData({...formData, targetCapital: Number(e.target.value)})} />
+                </div>
+             </div>
+             <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Suscripción (%)</Label>
+                  <Input type="number" step="0.01" value={formData.subscriptionFeeRate} onChange={(e) => setFormData({...formData, subscriptionFeeRate: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Admin (%)</Label>
+                  <Input type="number" step="0.01" value={formData.administrativeFeeRate} onChange={(e) => setFormData({...formData, administrativeFeeRate: Number(e.target.value)})} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase text-muted-foreground">Seguro Vida (%)</Label>
+                  <Input type="number" step="0.0001" value={formData.lifeInsuranceRate} onChange={(e) => setFormData({...formData, lifeInsuranceRate: Number(e.target.value)})} />
+                </div>
+             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleUpdateCircle} className="w-full">Guardar Cambios</Button>
+            <Button onClick={handleUpdateCircle} className="w-full h-12 text-lg font-bold">Guardar Cambios</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
