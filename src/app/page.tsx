@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { PiggyBank, Users, Calendar, Award, PartyPopper, Loader2, ArrowRight, Clock, Info } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -27,15 +27,26 @@ export default function Dashboard() {
   );
   const { data: memberships, isLoading: membershipsLoading } = useCollection(membershipsRef);
 
-  // 2. Fetch Circle Statuses to determine if they are active
-  const circleIds = memberships?.map(m => m.savingCircleId) || [];
+  // 2. Fetch Circle Statuses
+  const circleIds = useMemo(() => memberships?.map(m => m.savingCircleId) || [], [memberships]);
   const circlesQuery = useMemoFirebase(() => {
     if (!db || circleIds.length === 0) return null;
     return query(collection(db, 'saving_circles'), where(documentId(), 'in', circleIds));
   }, [db, circleIds.join(',')]);
   const { data: circles, isLoading: circlesLoading } = useCollection(circlesQuery);
 
-  const adjudicatedMemberships = (memberships || []).filter(m => m.adjudicationStatus === 'Adjudicated');
+  // 3. Filter valid memberships (only those whose circle still exists)
+  const validMemberships = useMemo(() => {
+    if (!memberships) return [];
+    if (!circles && !circlesLoading) return [];
+    if (!circles) return memberships; // Mientras carga, mostramos lo que hay
+    return memberships.filter(m => circles.some(c => c.id === m.savingCircleId));
+  }, [memberships, circles, circlesLoading]);
+
+  const adjudicatedMemberships = useMemo(() => 
+    validMemberships.filter(m => m.adjudicationStatus === 'Adjudicated'), 
+    [validMemberships]
+  );
 
   const calculateNextInstallmentDate = (joiningDateStr: string) => {
     const joinDate = new Date(joiningDateStr);
@@ -50,12 +61,12 @@ export default function Dashboard() {
   useEffect(() => {
     setMounted(true);
     
-    if (memberships && memberships.length > 0 && circles) {
+    if (validMemberships.length > 0 && circles) {
       const activeCircleIds = circles
         .filter(c => (c.currentMemberCount || 0) >= c.memberCapacity)
         .map(c => c.id);
 
-      const activeMemberships = memberships.filter(m => activeCircleIds.includes(m.savingCircleId));
+      const activeMemberships = validMemberships.filter(m => activeCircleIds.includes(m.savingCircleId));
       
       if (activeMemberships.length > 0) {
         setIsAnyCircleActive(true);
@@ -74,9 +85,9 @@ export default function Dashboard() {
       }
     } else {
       setIsAnyCircleActive(false);
-      setNextDueDate('Sin planes activos');
+      setNextDueDate(validMemberships.length === 0 ? 'Sin planes activos' : 'Cargando fechas...');
     }
-  }, [memberships, circles]);
+  }, [validMemberships, circles]);
 
   const formatCurrency = (val: number) => {
     if (!mounted) return `$0.00`;
@@ -148,7 +159,7 @@ export default function Dashboard() {
             <Users className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{memberships?.length || 0}</div>
+            <div className="text-2xl font-bold text-foreground">{validMemberships.length}</div>
             <p className="text-xs text-muted-foreground mt-1">Suscripciones en USD</p>
           </CardContent>
         </Card>
@@ -171,17 +182,16 @@ export default function Dashboard() {
             <CardDescription>Seguimiento de fechas de pago y estado de grupo.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {!memberships || memberships.length === 0 ? (
+            {validMemberships.length === 0 ? (
               <div className="py-10 text-center bg-muted/20 rounded-2xl border-dashed border-2">
                 <p className="text-muted-foreground italic">Aún no tienes suscripciones activas.</p>
                 <Button variant="link" asChild className="mt-2"><Link href="/explore">Explorar opciones</Link></Button>
               </div>
             ) : (
-              memberships.map((membership) => {
+              validMemberships.map((membership) => {
                 const circle = circles?.find(c => c.id === membership.savingCircleId);
                 const isCircleActive = circle && (circle.currentMemberCount || 0) >= circle.memberCapacity;
                 const totalCapital = membership.capitalPaid + membership.outstandingCapitalBalance;
-                const progress = totalCapital > 0 ? (membership.capitalPaid / totalCapital) * 100 : 0;
                 const nextPayDate = isCircleActive ? calculateNextInstallmentDate(membership.joiningDate) : null;
                 
                 return (

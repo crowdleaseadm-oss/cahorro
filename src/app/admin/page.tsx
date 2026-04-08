@@ -65,8 +65,16 @@ export default function AdminPage() {
   }, [formData]);
 
   const generateCustomId = () => {
+    // Para el prototipo, si no hay círculos, empezamos en AAAA0001
+    // Si hay círculos, generamos uno que siga el patrón visualmente
     const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const nums = "0123456789";
+    
+    if (!circlesList || circlesList.length === 0) {
+      return "AAAA0001";
+    }
+
+    // Simulamos un incremento o generamos uno aleatorio que cumpla el formato LLLLNNNN
     let l = "";
     for (let i = 0; i < 4; i++) l += letters[Math.floor(Math.random() * letters.length)];
     let n = "";
@@ -145,7 +153,7 @@ export default function AdminPage() {
               <DialogHeader>
                 <DialogTitle>Configurar Nuevo Círculo</DialogTitle>
                 <DialogDescription>
-                  Define los parámetros financieros y la visibilidad del grupo. El ID se generará en formato LLLLNNNN.
+                  Define los parámetros financieros y la visibilidad del grupo. El ID se generará en formato LLLLNNNN (ej. AAAA0001).
                 </DialogDescription>
               </DialogHeader>
               
@@ -303,7 +311,7 @@ export default function AdminPage() {
                 <div className="bg-accent/30 p-4 rounded-xl space-y-3">
                   <div className="flex items-center gap-2 font-bold text-sm text-primary mb-1">
                     <Calculator className="h-4 w-4" />
-                    Proyección Cuota #1 (Simulación)
+                    Proyección Cuota Promedio (Simulación)
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-[10px]">
                     <div>
@@ -315,7 +323,7 @@ export default function AdminPage() {
                       <span className="font-bold text-foreground">${calculations.adminFee.toFixed(2)}</span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground block uppercase">Seguro</span>
+                      <span className="text-muted-foreground block uppercase">Seguro Inicial</span>
                       <span className="font-bold text-foreground">${calculations.lifeInsuranceInicial.toFixed(2)}</span>
                     </div>
                     <div className="bg-primary/10 p-1 rounded">
@@ -335,7 +343,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <Card className="border-none shadow-sm">
+      <Card className="border-none shadow-sm bg-white">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -364,7 +372,9 @@ export default function AdminPage() {
             <TableBody>
               {circlesLoading ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-4">Cargando círculos...</TableCell></TableRow>
-              ) : circlesList?.map((circle) => {
+              ) : !circlesList || circlesList.length === 0 ? (
+                <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground italic">No hay círculos configurados.</TableCell></TableRow>
+              ) : circlesList.map((circle) => {
                 const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
                 return (
                   <TableRow key={circle.id}>
@@ -431,7 +441,7 @@ export default function AdminPage() {
             </AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción eliminará el círculo <strong>{circleToDelete}</strong> de forma permanente. 
-              Se perderán todas las configuraciones financieras asociadas a este grupo.
+              Este grupo desaparecerá de la vista de todos los miembros suscritos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

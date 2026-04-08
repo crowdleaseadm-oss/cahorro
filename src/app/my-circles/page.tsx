@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { PiggyBank, ArrowRight, Target, Calendar, DollarSign, Activity, Gavel, Loader2, Info, Clock } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -31,12 +31,20 @@ export default function MyCirclesPage() {
   const membershipsRef = useMemoFirebase(() => (db && user ? collection(db, 'users', user.uid, 'saving_circle_memberships') : null), [db, user]);
   const { data: memberships, isLoading: membershipsLoading } = useCollection(membershipsRef);
 
-  const circleIds = memberships?.map(m => m.savingCircleId) || [];
+  const circleIds = useMemo(() => memberships?.map(m => m.savingCircleId) || [], [memberships]);
   const circlesQuery = useMemoFirebase(() => {
     if (!db || circleIds.length === 0) return null;
     return query(collection(db, 'saving_circles'), where(documentId(), 'in', circleIds));
   }, [db, circleIds.join(',')]);
   const { data: circles, isLoading: circlesLoading } = useCollection(circlesQuery);
+
+  // Filtrar solo membresías de grupos que todavía existen
+  const validMemberships = useMemo(() => {
+    if (!memberships) return [];
+    if (!circles && !circlesLoading) return [];
+    if (!circles) return memberships; // Mientras carga, mostramos lo que hay
+    return memberships.filter(m => circles.some(c => c.id === m.savingCircleId));
+  }, [memberships, circles, circlesLoading]);
 
   const formatNumber = (num: number) => {
     if (!mounted) return num.toString();
@@ -97,7 +105,7 @@ export default function MyCirclesPage() {
         </div>
       </div>
 
-      {(!memberships || memberships.length === 0) ? (
+      {(validMemberships.length === 0) ? (
         <Card className="border-dashed border-2 bg-muted/20 flex flex-col items-center justify-center p-16 text-center rounded-3xl">
           <Activity className="h-16 w-16 text-muted-foreground mb-6 opacity-20" />
           <h3 className="text-xl font-bold">Sin suscripciones activas</h3>
@@ -108,7 +116,7 @@ export default function MyCirclesPage() {
         </Card>
       ) : (
         <div className="grid gap-8">
-          {memberships.map((membership) => {
+          {validMemberships.map((membership) => {
             const circle = circles?.find(c => c.id === membership.savingCircleId);
             const isCircleActive = circle && (circle.currentMemberCount || 0) >= circle.memberCapacity;
             const nextPayDate = isCircleActive ? calculateNextInstallmentDate(membership.joiningDate) : null;
