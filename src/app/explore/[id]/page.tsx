@@ -66,7 +66,7 @@ export default function CirclePlanPage() {
   const handleDownloadReceipt = (num: number) => {
     toast({
       title: "Generando recibo...",
-      description: `El recibo de la cuota #${num} se descargará en breve.`,
+      description: `El recibo de la cuota #${num} se descargará en breve. (IVA 21% Desglosado)`,
     });
     setTimeout(() => {
       toast({
@@ -284,14 +284,14 @@ export default function CirclePlanPage() {
                       {isAlreadyMember ? 'Resumen Financiero del Plan' : 'Costo Financiero Total (CFT)'}
                     </div>
                     <p className="text-sm text-muted-foreground max-w-md leading-relaxed">
-                      La 1ra cuota se abona al suscribirse e incluye IVA (21%) sobre conceptos administrativos.
+                      Costo total que incluye la administración del grupo y seguros obligatorios durante todo el plazo.
                     </p>
                   </div>
                   <div className="text-center md:text-right">
                     <div className="text-4xl font-black text-primary">
                       {(((totalPlanSum - capitalTotal) / capitalTotal) * 100).toFixed(2)}%
                     </div>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Carga Total (incl. IVA)</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Carga Total del Plan</span>
                   </div>
                 </div>
               </div>
@@ -303,7 +303,7 @@ export default function CirclePlanPage() {
               <CardTitle className="text-xl font-bold">
                 {isAlreadyMember ? 'Tu Plan de' : 'Proyección de'} {totalCuotas} Cuotas
               </CardTitle>
-              <CardDescription>Valores finales con IVA (21%) incluido en gastos administrativos.</CardDescription>
+              <CardDescription>Resumen de cuotas mensuales con cargos administrativos desglosados.</CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[600px] w-full pr-4">
@@ -434,7 +434,7 @@ export default function CirclePlanPage() {
               </div>
 
               <div className={`p-4 rounded-xl text-[10px] leading-relaxed ${isAlreadyMember ? 'bg-white/50 text-muted-foreground' : 'bg-white/10 text-white/80'}`}>
-                <p><strong>Nota IVA:</strong> Los gastos administrativos y derechos de suscripción incluyen IVA del 21% según normativa vigente.</p>
+                <p><strong>Nota legal:</strong> Al suscribirse usted acepta los términos y condiciones del contrato de adhesión del círculo de ahorro colaborativo.</p>
               </div>
 
               <Button 

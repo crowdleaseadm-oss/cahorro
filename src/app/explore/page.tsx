@@ -124,7 +124,7 @@ export default function ExplorePage() {
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs space-y-1">
                               <p className="text-xs font-bold">Cuota Promedio Estimada:</p>
-                              <p className="text-[10px] leading-relaxed">Incluye Alícuota + Gastos Admin + Derecho de Suscripción + Seguro de Vida + IVA (21%).</p>
+                              <p className="text-[10px] leading-relaxed">Valor final mensual que incluye conceptos administrativos, derecho de suscripción y seguro de vida.</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
