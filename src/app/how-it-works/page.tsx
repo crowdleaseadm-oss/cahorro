@@ -1,5 +1,7 @@
 import { Info, Users, CreditCard, TrendingUp, ShieldCheck, CheckCircle2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
 
 export default function HowItWorks() {
   const steps = [
@@ -82,9 +84,9 @@ export default function HowItWorks() {
       <div className="text-center p-12 bg-primary rounded-3xl text-white shadow-xl shadow-primary/20">
         <h2 className="text-3xl font-bold mb-4">¿Listo para comenzar?</h2>
         <p className="mb-8 opacity-90 text-lg">Únete hoy a miles de personas que están alcanzando sus metas.</p>
-        <button className="bg-white text-primary px-8 py-3 rounded-xl font-bold text-lg hover:bg-secondary transition-colors">
-          Ver círculos disponibles
-        </button>
+        <Button asChild size="lg" className="h-14 px-12 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20">
+          <Link href="/explore">Ver círculos disponibles</Link>
+        </Button>
       </div>
     </div>
   )

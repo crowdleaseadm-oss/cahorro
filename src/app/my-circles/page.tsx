@@ -192,7 +192,11 @@ export default function MyCirclesPage() {
                         {isCircleActive && (
                           <Dialog>
                             <DialogTrigger asChild>
-                              <Button variant="outline" className="flex-1 sm:flex-none border-primary/20 text-primary gap-2 hover:bg-primary/5 rounded-xl" onClick={() => setSelectedMembership(membership)}>
+                              <Button 
+                                variant="outline" 
+                                className="flex-1 sm:flex-none border-primary/20 text-primary gap-2 hover:bg-primary/5 rounded-xl"
+                                onClick={() => setSelectedMembership(membership)}
+                              >
                                 <Gavel className="h-4 w-4" />
                                 Licitación
                               </Button>

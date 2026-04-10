@@ -44,7 +44,7 @@ export default function CirclePlanPage() {
   }, [db, user, params.id]);
 
   const { data: existingMemberships, isLoading: membershipCheckLoading } = useCollection(membershipQuery);
-  const isAlreadyMember = existingMemberships && existingMemberships.length > 0;
+  const isAlreadyMember = !!(existingMemberships && existingMemberships.length > 0);
   const membership = existingMemberships?.[0];
   const paidCount = membership?.paidInstallmentsCount || 0;
 

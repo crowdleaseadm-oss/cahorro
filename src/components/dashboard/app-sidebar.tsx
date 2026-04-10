@@ -128,15 +128,15 @@ export function AppSidebar() {
             <div className={`h-2 w-2 rounded-full ${user ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
             <span className="text-xs font-semibold text-primary">Panel Admin</span>
           </div>
-          <Link href="/admin">
-            <SidebarMenuButton className="w-full justify-between bg-white border border-border shadow-sm hover:shadow-md transition-all">
+          <SidebarMenuButton asChild className="w-full justify-between bg-white border border-border shadow-sm hover:shadow-md transition-all">
+            <Link href="/admin">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-primary" />
                 <span className="text-xs font-bold">Gestionar Grupos</span>
               </div>
               <ChevronRight className="h-3 w-3 text-muted-foreground" />
-            </SidebarMenuButton>
-          </Link>
+            </Link>
+          </SidebarMenuButton>
         </div>
         
         {user && (
