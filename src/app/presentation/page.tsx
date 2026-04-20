@@ -202,7 +202,7 @@ export default function PresentationPage() {
   const slide = slides[currentSlide];
 
   return (
-    <div className="h-screen max-h-screen pt-20 md:pt-24 px-2 md:px-8 bg-[#FDFCFB] flex flex-col overflow-hidden pb-4 md:pb-8">
+    <div className="h-screen max-h-screen pt-16 md:pt-20 px-4 md:px-12 bg-[#FDFCFB] flex flex-col overflow-hidden pb-2 md:pb-4">
       <div className="relative flex-1 w-full flex flex-col items-center justify-center overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-slate-200 bg-white shadow-sm selection:bg-white selection:text-black">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0">
@@ -263,13 +263,12 @@ export default function PresentationPage() {
       <div className="relative z-10 w-full h-full flex flex-col items-center animate-in fade-in zoom-in duration-700">
         {/* Title & Subtitle Section - Enforced Margins */}
         <div className={cn(
-          "w-full flex-shrink-0 flex flex-col items-center text-center transition-all duration-700 py-3 md:py-4",
-          slide.id === 'intro' ? "justify-center h-full px-8 md:px-[5cm]" : "px-4 md:px-[2cm] space-y-1"
+          "w-full flex-shrink-0 flex flex-col items-center text-center transition-all duration-700 py-1 md:py-2",
+          slide.id === 'intro' ? "justify-center h-full px-4 md:px-[2cm]" : "px-4 md:px-[2cm] space-y-0.5"
         )}>
-          {slide.isLight && slide.logo ? (
             <div className={cn(
-              "flex flex-col items-center gap-10 mb-8 w-full transition-all duration-700",
-              slide.id === 'intro' ? "max-w-md md:max-w-lg lg:max-w-2xl" : "max-w-[120px] md:max-w-[180px]"
+              "flex flex-col items-center gap-6 mb-4 w-full transition-all duration-700",
+              slide.id === 'intro' ? "max-w-xs md:max-w-md lg:max-w-lg" : "max-w-[100px] md:max-w-[140px]"
             )}>
               <div className={cn(
                 "relative w-full animate-in fade-in slide-in-from-bottom-8 duration-1000",
@@ -290,7 +289,7 @@ export default function PresentationPage() {
 
           {slide.title && (
             <h1 className={cn(
-              "text-lg md:text-xl lg:text-2xl font-bold tracking-tight leading-none uppercase",
+              "text-base md:text-lg lg:text-xl font-bold tracking-tight leading-none uppercase",
               slide.isLight ? "text-slate-900" : "text-white"
             )}>
               {slide.title}
@@ -298,8 +297,8 @@ export default function PresentationPage() {
           )}
           
           <p className={cn(
-            "font-semibold leading-snug transition-colors whitespace-pre-wrap max-w-3xl",
-            slide.id === 'intro' ? "text-lg md:text-xl" : "text-sm md:text-base",
+            "font-semibold leading-snug transition-colors whitespace-pre-wrap max-w-2xl",
+            slide.id === 'intro' ? "text-base md:text-lg" : "text-xs md:text-sm",
             slide.isLight ? "text-slate-900" : "text-white/70"
           )}>
             {slide.description}
@@ -307,22 +306,22 @@ export default function PresentationPage() {
         </div>
 
         {/* Dynamic Section based on Slide Type */}
-        <div className="w-full flex-1 flex flex-col items-center justify-start pb-4 overflow-hidden">
-          <div className="w-full max-w-full px-4 md:px-[2cm] pt-2 md:pt-4 overflow-y-auto custom-scrollbar">
+        <div className="w-full flex-1 flex flex-col items-center justify-start pb-2 overflow-hidden">
+          <div className="w-full max-w-full px-4 md:px-[2cm] pt-1 md:pt-2 overflow-y-auto custom-scrollbar">
           {slide.id === 'comparativa' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
               {slide.comparisonMethods?.map((m: any, i: number) => (
                 <div key={i} className={cn(
                   "p-4 xl:p-5 rounded-[1.5rem] bg-white border border-slate-200 shadow-lg space-y-3 transition-all hover:scale-[1.01]",
                 )}>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                      {m.icon === 'user' && <Users className="h-5 w-5" />}
-                      {m.icon === 'building' && <Lock className="h-5 w-5" />}
-                      {m.icon === 'file-text' && <ShieldCheck className="h-5 w-5" />}
-                      {m.icon === 'users' && <Users className="h-5 w-5" />}
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                      {m.icon === 'user' && <Users className="h-4 w-4" />}
+                      {m.icon === 'building' && <Lock className="h-4 w-4" />}
+                      {m.icon === 'file-text' && <ShieldCheck className="h-4 w-4" />}
+                      {m.icon === 'users' && <Users className="h-4 w-4" />}
                     </div>
-                    <h3 className="text-lg font-black text-slate-900">{m.name}</h3>
+                    <h3 className="text-base font-black text-slate-900">{m.name}</h3>
                   </div>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -366,26 +365,26 @@ export default function PresentationPage() {
                   "p-2 md:py-1 md:px-4 xl:py-2 xl:px-5 rounded-2xl md:rounded-[2rem] border border-slate-200 bg-white shadow-md space-y-0.5 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/10 group cursor-default flex flex-col justify-center text-left",
                   i === 4 ? "md:col-span-2 bg-gradient-to-r from-primary/5 to-transparent border-primary/20 shadow-primary/5 px-4 md:px-6 py-1.5" : ""
                 )}>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <div className={cn(
-                      "h-8 w-8 rounded-lg flex items-center justify-center transition-all group-hover:bg-primary group-hover:text-white group-hover:scale-110 shadow-sm shrink-0",
+                      "h-7 w-7 rounded-lg flex items-center justify-center transition-all group-hover:bg-primary group-hover:text-white group-hover:scale-110 shadow-sm shrink-0",
                       "bg-slate-100 text-primary"
                     )}>
-                      {g.icon === 'car' && <Car className="h-4 w-4" />}
-                      {g.icon === 'plane' && <Plane className="h-4 w-4" />}
-                      {g.icon === 'rocket' && <Rocket className="h-4 w-4" />}
-                      {g.icon === 'home' && <Home className="h-4 w-4" />}
-                      {g.icon === 'briefcase' && <Briefcase className="h-4 w-4" />}
+                      {g.icon === 'car' && <Car className="h-3.5 w-3.5" />}
+                      {g.icon === 'plane' && <Plane className="h-3.5 w-3.5" />}
+                      {g.icon === 'rocket' && <Rocket className="h-3.5 w-3.5" />}
+                      {g.icon === 'home' && <Home className="h-3.5 w-3.5" />}
+                      {g.icon === 'briefcase' && <Briefcase className="h-3.5 w-3.5" />}
                     </div>
                     <h3 className={cn(
                       "font-black text-slate-900 leading-tight transition-colors",
-                      i === 4 ? "text-xl md:text-2xl" : "text-base md:text-lg"
+                      i === 4 ? "text-lg md:text-xl" : "text-sm md:text-base"
                     )}>{g.label}</h3>
                   </div>
                   
                   <p className={cn(
                     "text-slate-500 font-bold leading-tight transition-colors",
-                    i === 4 ? "text-sm md:text-base max-w-2xl" : "text-[11px] md:text-xs"
+                    i === 4 ? "text-xs md:text-sm max-w-2xl" : "text-[10px] md:text-xs"
                   )}>{g.desc}</p>
                 </div>
               ))}
@@ -445,35 +444,30 @@ export default function PresentationPage() {
                     <p className={cn("text-xs leading-tight font-semibold", slide.isLight ? "text-slate-500" : "text-white/60")}>
                       {s.d}
                     </p>
-                 </div>
-               ))}
-            </div>
-          )}
-
           {slide.id === 'security' && (
-            <div className="grid md:grid-cols-2 gap-8 text-left items-center">
-               <div className="space-y-3">
+            <div className="grid md:grid-cols-2 gap-4 text-left items-center">
+               <div className="space-y-2">
                  {slide.points?.map((p, i) => (
                    <div key={i} className={cn(
-                     "flex items-center gap-3 p-3 rounded-xl border transition-colors",
+                     "flex items-center gap-2 p-2 rounded-lg border transition-colors",
                      slide.isLight ? "bg-slate-50 border-slate-200" : "bg-white/10 border-white/20"
                    )}>
-                      <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0" />
-                      <span className={cn("font-bold text-[13px] leading-tight", slide.isLight ? "text-slate-800" : "text-white")}>{p}</span>
+                      <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
+                      <span className={cn("font-bold text-[12px] leading-tight", slide.isLight ? "text-slate-800" : "text-white")}>{p}</span>
                    </div>
                  ))}
                </div>
-
+ 
                {/* Info Block */}
-               <div className="p-8 rounded-[2rem] bg-slate-50 border border-slate-200 shadow-sm flex flex-col justify-center space-y-4">
-                  <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mb-2">
-                    <TrendingUp className="h-6 w-6" />
+               <div className="p-4 md:p-6 rounded-[1.5rem] bg-slate-50 border border-slate-200 shadow-sm flex flex-col justify-center space-y-2">
+                  <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-1">
+                    <TrendingUp className="h-4 w-4" />
                   </div>
-                  <p className="text-lg font-bold text-slate-900 leading-tight">
+                  <p className="text-base font-bold text-slate-900 leading-tight">
                     Transparencia Total:
                   </p>
-                  <p className="text-sm font-semibold text-slate-600 leading-relaxed">
-                    Cada socio tendrá acceso a la visualización en tiempo real del <span className="text-primary">saldo disponible del fondo común</span> de su grupo y del acumulado del <span className="text-emerald-600">fondo de penalidades</span>, el cual se distribuye equitativamente entre los miembros cumplidores.
+                  <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+                    Cada socio tendrá acceso a la visualización en tiempo real del <span className="text-primary">saldo disponible del fondo común</span> de su grupo y del acumulado del <span className="text-emerald-600">fondo de penalidades</span>.
                   </p>
                </div>
             </div>
