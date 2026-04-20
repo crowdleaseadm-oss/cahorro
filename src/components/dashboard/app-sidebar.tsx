@@ -102,9 +102,9 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="border-r border-border bg-white shadow-sm">
-      <SidebarHeader className="p-6">
+      <SidebarHeader className="p-4">
         <Link href="/" className="flex items-center group">
-          <div className="flex h-24 w-24 items-center justify-center shrink-0 py-2">
+          <div className="flex h-16 w-16 items-center justify-center shrink-0 py-1.5">
             <img 
               src="/branding/Isotipo.svg" 
               alt="Círculo de Ahorro Logo" 

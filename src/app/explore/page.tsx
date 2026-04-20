@@ -38,9 +38,17 @@ export default function ExplorePage() {
   const { data: circles, isLoading } = useCollection(circlesRef);
 
   const processedCircles = useMemo(() => {
-    if (!circles) return [];
+    const MOCK_CIRCLES = [
+      { id: 'DEMO01', name: '$ 2.000', targetCapital: 2000, totalInstallments: 12, currentMemberCount: 12, memberCapacity: 24, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString() },
+      { id: 'DEMO02', name: '$ 5.000', targetCapital: 5000, totalInstallments: 36, currentMemberCount: 67, memberCapacity: 72, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString() },
+      { id: 'DEMO03', name: '$ 15.000', targetCapital: 15000, totalInstallments: 84, currentMemberCount: 163, memberCapacity: 168, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString() },
+      { id: 'DEMO04', name: '$ 10.000', targetCapital: 10000, totalInstallments: 84, currentMemberCount: 84, memberCapacity: 168, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString() },
+      { id: 'DEMO05', name: '$ 7.500', targetCapital: 7500, totalInstallments: 48, currentMemberCount: 10, memberCapacity: 96, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString() },
+    ];
+
+    const allCircles = [...(circles || []), ...MOCK_CIRCLES];
     
-    return circles.map(circle => {
+    return allCircles.map(circle => {
       const n = circle.totalInstallments;
       const alicuota = calculatePureAlicuota(circle.targetCapital, n);
       const adminFee = calculateAdminFee(alicuota, circle.administrativeFeeRate || 10, circle.adminVatApplied);
@@ -279,20 +287,22 @@ export default function ExplorePage() {
               const memberProgress = ((circle.currentMemberCount || 0) / circle.memberCapacity) * 100;
 
               return (
-                <Card key={circle.id} className="group flex flex-col h-full border-none shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 overflow-hidden bg-white rounded-[1.5rem]">
-                  <div className={cn("h-1 w-full", isFull ? 'bg-orange-500' : 'bg-primary')} />
+                <Card key={circle.id} className="group flex flex-col h-full border-none shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 overflow-visible bg-white rounded-[1.5rem] relative">
+                  <div className={cn("h-1 w-full rounded-t-[1.5rem]", isFull ? 'bg-orange-500' : 'bg-primary')} />
                   
+                  {/* Floating Urgency Badge */}
+                  {circle.remaining <= 10 && !isFull && (
+                    <Badge variant="default" className="absolute -top-2 -right-2 z-50 bg-red-600 text-white animate-pulse border-2 border-white shadow-lg font-black uppercase text-[10px] px-3 h-7 rounded-full flex items-center justify-center whitespace-nowrap">
+                      ¡SOLO {circle.remaining}!
+                    </Badge>
+                  )}
+
                   <CardHeader className="p-4 pb-0 space-y-2">
-                    <div className="flex justify-between items-center gap-2">
-                      <CardTitle className="text-lg group-hover:text-primary transition-colors leading-tight font-black uppercase tracking-tighter line-clamp-1 flex-1">
+                    <div className="flex justify-between items-start gap-2">
+                      <CardTitle className="text-xl group-hover:text-primary transition-colors leading-tight font-bold uppercase tracking-tighter line-clamp-1 flex-1">
                         {circle.name}
                       </CardTitle>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {circle.remaining <= 10 && !isFull && (
-                          <Badge variant="default" className="bg-red-600 text-white animate-pulse border-none font-black uppercase text-[9px] px-2 h-5 rounded-md whitespace-nowrap">
-                            ¡SOLO {circle.remaining}!
-                          </Badge>
-                        )}
+                      <div className="flex items-center gap-2 shrink-0 pt-0.5">
                         {circle.isPrivate ? (
                           <Badge variant="outline" className="h-5 gap-1 border-orange-100 text-orange-600 bg-orange-50/50 rounded-md text-[9px] font-black uppercase px-1.5">
                             <Lock className="h-2.5 w-2.5" /> Privado

@@ -18,9 +18,9 @@ export default function LandingPage() {
         <div className="absolute top-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-secondary/5 blur-[120px] animate-pulse" />
         <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/5 blur-[120px]" />
       </div>
-      <div className="max-w-7xl mx-auto pb-40 pt-20 px-6">
+      <div className="max-w-7xl mx-auto pb-40 pt-0 px-6">
         {/* HERO SECTION */}
-        <section className="relative pt-20 pb-12">
+        <section className="relative pt-0 pb-12">
           <div className="flex flex-col items-center text-center max-w-6xl mx-auto">
             {/* COMBINED LOGO */}
             <div className="flex flex-col items-center mb-10 animate-in fade-in zoom-in-95 duration-1000 ease-out">
@@ -39,14 +39,6 @@ export default function LandingPage() {
                 El sistema de ahorro <span className="text-primary font-bold">transparente y seguro</span> diseñado para que alcances tus metas junto a una comunidad sólida.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-4 pt-4">
-                <Button asChild variant="outline" size="lg" className="h-16 px-10 rounded-[1.5rem] border-secondary/30 hover:bg-secondary/5 text-secondary text-lg font-bold transition-all hover:border-secondary group">
-                  <Link href="/explainer" className="flex items-center gap-3">
-                    <div className="bg-secondary/10 p-1.5 rounded-full group-hover:bg-secondary group-hover:text-white transition-all">
-                      <HelpCircle className="h-4 w-4" />
-                    </div>
-                    ¿QUÉ ES UN CÍRCULO?
-                  </Link>
-                </Button>
                 <Button asChild variant="outline" size="lg" className="h-16 px-10 rounded-[1.5rem] border-primary/20 hover:bg-primary/5 text-lg font-bold transition-all hover:border-primary/40 group">
                   <Link href="/presentation" className="flex items-center gap-3">
                     PRESENTACIÓN GENERAL 

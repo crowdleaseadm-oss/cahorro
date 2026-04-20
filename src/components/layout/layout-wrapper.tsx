@@ -51,7 +51,7 @@ export function LayoutWrapper({ children }: { children: React.ReactNode }) {
       <PublicNav />
       <main className={cn(
         "w-full h-full transition-all duration-300",
-        (pathname !== '/' && !pathname.startsWith('/presentation')) && "pt-24"
+        (pathname === '/' || pathname.startsWith('/presentation')) ? "pt-[116px]" : ((pathname !== '/' && !pathname.startsWith('/presentation')) && "pt-20")
       )}>
         {children}
       </main>

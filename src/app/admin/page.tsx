@@ -123,18 +123,24 @@ export default function AdminPage() {
   });
   
   const circlesRef = useMemoFirebase(() => (db && user ? collection(db, 'saving_circles') : null), [db, user]);
-  const { data: circlesList, isLoading: circlesLoading } = useCollection(circlesRef);
+  const MOCK_CIRCLES = useMemo(() => [
+    { id: 'DEMO01', name: '$ 2.000', targetCapital: 2000, totalInstallments: 12, currentMemberCount: 12, memberCapacity: 24, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString() },
+    { id: 'DEMO02', name: '$ 5.000', targetCapital: 5000, totalInstallments: 36, currentMemberCount: 67, memberCapacity: 72, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString() },
+    { id: 'DEMO03', name: '$ 15.000', targetCapital: 15000, totalInstallments: 84, currentMemberCount: 163, memberCapacity: 168, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString() },
+    { id: 'DEMO04', name: '$ 10.000', targetCapital: 10000, totalInstallments: 84, currentMemberCount: 84, memberCapacity: 168, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString() },
+    { id: 'DEMO05', name: '$ 7.500', targetCapital: 7500, totalInstallments: 48, currentMemberCount: 10, memberCapacity: 96, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString() },
+  ], []);
 
-  const IVA_RATE = 1.21;
+  const mergedCircles = useMemo(() => [...(circlesList || []), ...MOCK_CIRCLES], [circlesList, MOCK_CIRCLES]);
 
   const financialStats = useMemo(() => {
-    if (!circlesList) return { 
+    if (!mergedCircles) return { 
       subPercibida: 0, subProyectada: 0, 
       adminPercibida: 0, adminProyectada: 0, 
       activeMembers: 0, totalCapacity: 0 
     };
     
-    const filteredByStatus = circlesList.filter(circle => {
+    const filteredByStatus = mergedCircles.filter(circle => {
       if (tableStatusFilter === 'all') return true;
       const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
       const isClosed = circle.status === 'Closed';
@@ -164,8 +170,8 @@ export default function AdminPage() {
   }, [circlesList, tableStatusFilter, selectedCircleFilter]);
 
   const circlesForDropdown = useMemo(() => {
-    if (!circlesList) return [];
-    return circlesList.filter(circle => {
+    if (!mergedCircles) return [];
+    return mergedCircles.filter(circle => {
       if (tableStatusFilter === 'all') return true;
       const isFull = (circle.currentMemberCount || 0) >= circle.memberCapacity;
       const isClosed = circle.status === 'Closed';
@@ -174,7 +180,7 @@ export default function AdminPage() {
       if (tableStatusFilter === 'closed') return isClosed;
       return true;
     });
-  }, [circlesList, tableStatusFilter]);
+  }, [mergedCircles, tableStatusFilter]);
 
   useEffect(() => {
     // Reset individual circle filter if it's no longer in the filtered list

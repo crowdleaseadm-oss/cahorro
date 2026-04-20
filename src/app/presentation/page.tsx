@@ -25,18 +25,100 @@ import {
   Minus,
   Check,
   X,
-  AlertCircle
+  AlertCircle,
+  Cake,
+  Calendar,
+  AlertTriangle,
+  PartyPopper,
+  Info
 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import Image from 'next/image';
 import Link from 'next/link';
 
 const slides = [
   {
+    id: 'story-start',
+    title: "El Círculo del Ahorro: El Ciclo de Éxito",
+    description: "Una historia sobre cómo la colaboración transforma sueños en realidades compartidas.",
+    bg: "bg-white",
+    isStory: true,
+    isLight: true,
+    cards: [
+      {
+        title: "6 Amigas, Una Gran Misión",
+        desc: "Ana, Bea, Cele, Diana, Eli y Flor son mejores amigas. Sus hijos cumplen años en meses seguidos: de marzo a agosto.",
+        image: "/branding/explainer-moms-v2.png",
+        icon: <Users className="h-5 w-5" />,
+        color: "bg-blue-50 text-blue-600"
+      },
+      {
+        title: "El Sueño de la Fiesta Perfecta",
+        desc: "Ana averiguó los precios: ¡el festejo sale $ 2.000.000! Parece que este año no tendrán la fiesta con la que sueñan.",
+        image: "/branding/worried-mother.png",
+        icon: <Cake className="h-5 w-5" />,
+        color: "bg-pink-50 text-pink-600"
+      },
+      {
+        title: "Una Solución Colaborativa",
+        desc: "Bea propone: '¡Si cada una aporta $ 350.000 por mes, se lo damos a la que cumple años ese mes!'",
+        image: "/branding/six-hands-illust.png",
+        icon: <Calendar className="h-5 w-5" />,
+        color: "bg-emerald-50 text-emerald-600"
+      },
+      {
+        title: "¡Todas Festejan Felices!",
+        desc: "Al final, las 6 amigas pagaron sus fiestas sin esfuerzo gracias a la gran fuerza del grupo. ¡El círculo se cerró!",
+        image: "/branding/explainer-party.png",
+        icon: <PartyPopper className="h-5 w-5" />,
+        color: "bg-purple-50 text-purple-600"
+      }
+    ]
+  },
+  {
+    id: 'story-steps',
+    title: "Pero la realidad es más compleja...",
+    description: "No todo es tan simple cuando el ahorro depende únicamente de la buena voluntad entre personas.",
+    bg: "bg-slate-50",
+    isStory: true,
+    isLight: true,
+    steps: [
+      {
+        id: 'inflacion',
+        t: "¿Qué pasa con la Inflación?",
+        d: "¿Qué sucede si los $2.000.000 ya no alcanzan para nada al final del grupo debido a la suba de precios?",
+        icon: <AlertTriangle className="h-4 w-4" />,
+        color: "bg-orange-50 text-orange-600"
+      },
+      {
+        id: 'incumplimiento',
+        t: "¿Qué pasa si una no paga?",
+        d: "¿Qué sucede si alguien deja de aportar después de que ya le festejaron a su hija y abandona al grupo?",
+        icon: <Lock className="h-4 w-4" />,
+        color: "bg-red-50 text-red-600"
+      },
+      {
+        id: 'capacidad',
+        t: "¿Qué pasa si no todas pueden?",
+        d: "¿Qué sucede si la cuota se hace muy alta o no todas tienen la misma posibilidad de ahorro mensual?",
+        icon: <Users className="h-4 w-4" />,
+        color: "bg-blue-50 text-blue-600"
+      },
+      {
+        id: 'escala',
+        t: "¿Qué pasa si quiero más?",
+        d: "¿Qué sucede si una desea una fiesta mucho más grande y necesita buscar a otro grupo dispuesto a aportar más?",
+        icon: <TrendingUp className="h-4 w-4" />,
+        color: "bg-indigo-50 text-indigo-600"
+      }
+    ]
+  },
+  {
     id: 'intro',
-    title: "",
-    description: "La plataforma líder que transforma el ahorro en realidades mediante la fuerza de la comunidad.",
+    title: "Así nace Círculo de Ahorro",
+    description: "La plataforma líder que profesionaliza el ahorro comunitario para transformar realidades.",
     bg: "bg-white",
     accent: "text-primary",
     isLight: true,
@@ -55,40 +137,6 @@ const slides = [
       { label: "Turismo", desc: "Descubrí el destino de tus sueños planificando tu ahorro para viajar con total libertad.", icon: "plane", color: "from-teal-500/10 to-teal-600/5" },
       { label: "Emprendimiento", desc: "Capitalizá tu negocio o lanzá ese proyecto que tenés en mente con fondos genuinos.", icon: "rocket", color: "from-orange-500/10 to-orange-600/5" },
       { label: "Tu Libertad, Tu Capital", desc: "El capital es 100% tuyo. Sin restricciones ni explicaciones, vos elegís en qué transformar tu ahorro.", icon: "briefcase", color: "from-purple-500/10 to-purple-600/5" }
-    ]
-  },
-  {
-    id: 'comparativa',
-    title: "Métodos para llegar a tus Metas",
-    description: "Cada camino tiene sus desafíos. Entenderlos es el primer paso para elegir el mejor.",
-    bg: "bg-neutral-50",
-    accent: "text-primary",
-    isLight: true,
-    comparisonMethods: [
-      {
-        name: "Ahorro Propio",
-        pros: ["Control total del capital", "Sin deudas ni intereses"],
-        cons: ["Proceso extremadamente lento", "Primer recurso ante un antojo (aleja la meta)"],
-        icon: "user"
-      },
-      {
-        name: "Crédito Bancario",
-        pros: ["Disponibilidad inmediata", "Financiación a largo plazo"],
-        cons: ["Tasas de interés abusivas", "Obligatoriedad de adquirir seguros"],
-        icon: "building"
-      },
-      {
-        name: "Planes de Ahorro",
-        pros: ["Cuotas accesibles", "Acceso a bienes específicos"],
-        cons: ["Alta volatilidad de cuotas (ítems diferidos)", "Cargos administrativos poco claros"],
-        icon: "file-text"
-      },
-      {
-        name: "Círculos Informales",
-        pros: ["Bajo costo administrativo", "Basado en la confianza mutua"],
-        cons: ["Cero seguridad jurídica", "Riesgo total de estafa o falta de pago"],
-        icon: "users"
-      }
     ]
   },
   {
@@ -200,9 +248,9 @@ export default function PresentationPage() {
   if (!isMounted) return null;
 
   const slide = slides[currentSlide];
-
+  
   return (
-    <div className="h-screen max-h-screen pt-16 md:pt-20 px-4 md:px-12 bg-[#FDFCFB] flex flex-col overflow-hidden pb-2 md:pb-4">
+    <div className="h-[calc(100vh-40px)] max-h-[calc(100vh-40px)] pt-0 px-4 md:px-12 bg-[#FDFCFB] flex flex-col overflow-hidden pb-1 md:pb-2">
       <div className="relative flex-1 w-full flex flex-col items-center justify-center overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-slate-200 bg-white shadow-sm selection:bg-white selection:text-black">
       {/* Background Layer */}
       <div className="absolute inset-0 z-0">
@@ -261,14 +309,14 @@ export default function PresentationPage() {
 
       {/* Main Content */}
       <div className="relative z-10 w-full h-full flex flex-col items-center animate-in fade-in zoom-in duration-700">
-        {/* Title & Subtitle Section - Enforced Margins */}
         <div className={cn(
-          "w-full flex-shrink-0 flex flex-col items-center text-center transition-all duration-700 py-1 md:py-2",
-          slide.id === 'intro' ? "justify-center h-full px-4 md:px-[2cm]" : "px-4 md:px-[2cm] space-y-0.5"
+          "w-full flex-shrink-0 flex flex-col items-center text-center transition-all duration-700",
+          slide.id === 'intro' ? "justify-center h-full px-4 md:px-[2cm] mt-[0.5cm]" : "px-4 md:px-[2cm] space-y-0.5 mt-[1cm]"
         )}>
+          {slide.logo ? (
             <div className={cn(
               "flex flex-col items-center gap-6 mb-4 w-full transition-all duration-700",
-              slide.id === 'intro' ? "max-w-xs md:max-w-md lg:max-w-lg" : "max-w-[100px] md:max-w-[140px]"
+              slide.id === 'intro' ? "max-w-xs md:max-w-md lg:max-w-xl" : "max-w-[100px] md:max-w-[140px]"
             )}>
               <div className={cn(
                 "relative w-full animate-in fade-in slide-in-from-bottom-8 duration-1000",
@@ -289,7 +337,7 @@ export default function PresentationPage() {
 
           {slide.title && (
             <h1 className={cn(
-              "text-base md:text-lg lg:text-xl font-bold tracking-tight leading-none uppercase",
+              "text-xl md:text-2xl lg:text-3xl font-bold tracking-tight leading-none uppercase",
               slide.isLight ? "text-slate-900" : "text-white"
             )}>
               {slide.title}
@@ -297,8 +345,9 @@ export default function PresentationPage() {
           )}
           
           <p className={cn(
-            "font-semibold leading-snug transition-colors whitespace-pre-wrap max-w-2xl",
-            slide.id === 'intro' ? "text-base md:text-lg" : "text-xs md:text-sm",
+            "font-semibold leading-snug transition-colors whitespace-pre-wrap",
+            ['story-steps', 'security', 'vision'].includes(slide.id) ? "max-w-5xl" : "max-w-4xl",
+            slide.id === 'intro' ? "text-xl md:text-2xl" : "text-base md:text-lg",
             slide.isLight ? "text-slate-900" : "text-white/70"
           )}>
             {slide.description}
@@ -308,86 +357,109 @@ export default function PresentationPage() {
         {/* Dynamic Section based on Slide Type */}
         <div className="w-full flex-1 flex flex-col items-center justify-start pb-2 overflow-hidden">
           <div className="w-full max-w-full px-4 md:px-[2cm] pt-1 md:pt-2 overflow-y-auto custom-scrollbar">
-          {slide.id === 'comparativa' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-              {slide.comparisonMethods?.map((m: any, i: number) => (
+          
+          {slide.id === 'story-start' && (
+            <div className="grid grid-cols-2 w-full h-full justify-center items-stretch gap-3">
+              {slide.cards?.map((card: any, i: number) => (
                 <div key={i} className={cn(
-                  "p-4 xl:p-5 rounded-[1.5rem] bg-white border border-slate-200 shadow-lg space-y-3 transition-all hover:scale-[1.01]",
+                  "flex flex-row items-center w-full h-[5cm] rounded-[1.25rem] border overflow-hidden shadow-md bg-white group transition-all hover:shadow-lg",
+                  i === 0 ? "border-blue-100" : i === 1 ? "border-pink-100" : i === 2 ? "border-emerald-100" : "border-purple-100"
                 )}>
-                  <div className="flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                      {m.icon === 'user' && <Users className="h-4 w-4" />}
-                      {m.icon === 'building' && <Lock className="h-4 w-4" />}
-                      {m.icon === 'file-text' && <ShieldCheck className="h-4 w-4" />}
-                      {m.icon === 'users' && <Users className="h-4 w-4" />}
-                    </div>
-                    <h3 className="text-base font-black text-slate-900">{m.name}</h3>
+                  {/* Image Area */}
+                  <div className={cn(
+                    "relative w-1/3 h-full overflow-hidden shrink-0 transition-all duration-700",
+                    card.isIconOnly ? "bg-slate-50 flex items-center justify-center p-4" : ""
+                  )}>
+                    {card.image ? (
+                      <Image 
+                        src={card.image} 
+                        alt={card.title} 
+                        fill 
+                        className="object-cover transition-transform group-hover:scale-110 duration-700"
+                      />
+                    ) : (
+                      <div className={cn("p-6 rounded-2xl shadow-inner", card.color)}>
+                        {React.cloneElement(card.icon as React.ReactElement, { className: "h-12 w-12" })}
+                      </div>
+                    )}
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 flex items-center gap-2">
-                         <Plus className="h-3 w-3" /> Ventajas
-                      </span>
-                      <ul className="space-y-1">
-                        {m.pros.map((p: string, idx: number) => (
-                          <li key={idx} className="text-[13px] text-slate-600 flex items-start gap-2">
-                            <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                            <span className="font-medium leading-tight">{p}</span>
-                          </li>
-                        ))}
-                      </ul>
+                  {/* Content Area */}
+                  <div className="flex-1 flex flex-col justify-center p-4 text-left overflow-hidden">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className={cn(
+                        "p-1.5 rounded-lg shadow-sm border shrink-0",
+                        card.color
+                      )}>
+                        {card.icon}
+                      </div>
+                      <h3 className="text-sm md:text-lg font-black text-slate-900 leading-tight">
+                        {card.title}
+                      </h3>
                     </div>
-                    
-                    <div className="space-y-2">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-red-600 flex items-center gap-2">
-                         <Minus className="h-3 w-3" /> Desventajas
-                      </span>
-                      <ul className="space-y-1">
-                        {m.cons.map((c: string, idx: number) => (
-                          <li key={idx} className="text-[13px] text-slate-600 flex items-start gap-2">
-                            <X className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
-                            <span className="font-medium leading-tight">{c}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    <p className="text-[10px] md:text-sm font-bold text-slate-600 leading-snug line-clamp-4">
+                      {card.desc}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {slide.id === 'metas' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-5xl mx-auto text-left">
-              {slide.pillarGoals?.map((g: any, i: number) => (
-                <div key={i} className={cn(
-                  "p-2 md:py-1 md:px-4 xl:py-2 xl:px-5 rounded-2xl md:rounded-[2rem] border border-slate-200 bg-white shadow-md space-y-0.5 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-primary/10 group cursor-default flex flex-col justify-center text-left",
-                  i === 4 ? "md:col-span-2 bg-gradient-to-r from-primary/5 to-transparent border-primary/20 shadow-primary/5 px-4 md:px-6 py-1.5" : ""
-                )}>
-                  <div className="flex items-center gap-2">
+          {slide.id === 'story-steps' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full py-2">
+              {slide.steps?.map((step: any, i: number) => (
+                <div key={i} className="flex flex-col justify-center p-4 md:p-6 bg-white rounded-[2rem] border border-slate-100 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all cursor-default">
+                  <div className="flex items-center gap-4 mb-3">
                     <div className={cn(
-                      "h-7 w-7 rounded-lg flex items-center justify-center transition-all group-hover:bg-primary group-hover:text-white group-hover:scale-110 shadow-sm shrink-0",
-                      "bg-slate-100 text-primary"
+                      "p-3 rounded-xl border-2",
+                      step.color
                     )}>
-                      {g.icon === 'car' && <Car className="h-3.5 w-3.5" />}
-                      {g.icon === 'plane' && <Plane className="h-3.5 w-3.5" />}
-                      {g.icon === 'rocket' && <Rocket className="h-3.5 w-3.5" />}
-                      {g.icon === 'home' && <Home className="h-3.5 w-3.5" />}
-                      {g.icon === 'briefcase' && <Briefcase className="h-3.5 w-3.5" />}
+                      {step.icon}
                     </div>
-                    <h3 className={cn(
-                      "font-black text-slate-900 leading-tight transition-colors",
-                      i === 4 ? "text-lg md:text-xl" : "text-sm md:text-base"
-                    )}>{g.label}</h3>
+                    <h3 className="text-sm md:text-xl font-black text-slate-900 leading-tight">
+                      {step.t}
+                    </h3>
                   </div>
-                  
-                  <p className={cn(
-                    "text-slate-500 font-bold leading-tight transition-colors",
-                    i === 4 ? "text-xs md:text-sm max-w-2xl" : "text-[10px] md:text-xs"
-                  )}>{g.desc}</p>
+                  <p className="text-xs md:text-base font-bold text-slate-600 leading-relaxed italic">
+                    "{step.d}"
+                  </p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {slide.id === 'metas' && (
+            <div className="flex flex-col gap-2 w-full max-w-5xl mx-auto pb-4">
+              {/* Vertical Card Stack */}
+              <div className="grid grid-cols-1 gap-1.5 md:gap-2">
+                {slide.pillarGoals?.map((g: any, i: number) => (
+                  <div key={i} className="flex items-center gap-4 p-1.5 px-4 rounded-xl md:rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all cursor-default text-left group">
+                    <div className="h-8 w-8 rounded-lg bg-slate-50 text-primary flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors shadow-sm">
+                      {g.icon === 'car' && <Car className="h-4 w-4" />}
+                      {g.icon === 'plane' && <Plane className="h-4 w-4" />}
+                      {g.icon === 'rocket' && <Rocket className="h-4 w-4" />}
+                      {g.icon === 'home' && <Home className="h-4 w-4" />}
+                      {g.icon === 'briefcase' && <Briefcase className="h-4 w-4" />}
+                    </div>
+                    <div className="flex items-baseline gap-2 overflow-hidden">
+                       <h3 className="font-black text-slate-900 text-xs md:text-sm uppercase tracking-tight shrink-0">{g.label}:</h3>
+                       <p className="text-slate-500 font-bold text-[10px] md:text-xs leading-tight line-clamp-1 italic">{g.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {/* Screenshot Container */}
+              <div className="mt-2 relative w-full h-[220px] md:h-[300px] rounded-3xl overflow-hidden border-4 border-white shadow-2xl ring-1 ring-slate-100 bg-slate-50">
+                <Image 
+                  src="/branding/grupos_ejemplo.png?v=2"
+                  alt="Ejemplos de Grupos"
+                  fill
+                  style={{ objectPosition: '3% 0%' }}
+                  className="object-cover"
+                  priority
+                />
+              </div>
             </div>
           )}
 
@@ -407,7 +479,7 @@ export default function PresentationPage() {
 
           {slide.id === 'solution' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-              {slide.benefitCards?.map((b, i) => (
+              {slide.benefitCards?.map((b: any, i: number) => (
                 <div key={i} className="p-3 md:py-2 md:px-4 xl:py-3 xl:px-5 rounded-xl md:rounded-[1.5rem] bg-white border border-slate-200 shadow-lg shadow-slate-200/50 space-y-1 md:space-y-2 hover:scale-[1.02] transition-transform group flex flex-col justify-center">
                    <div className="flex items-center gap-4">
                      <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors shrink-0">
@@ -428,7 +500,7 @@ export default function PresentationPage() {
 
           {slide.id === 'how-it-works' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-               {slide.steps?.map((s, i) => (
+               {slide.steps?.map((s: any, i: number) => (
                  <div key={i} className={cn(
                   "text-left p-3 md:p-4 rounded-xl md:rounded-[1.5rem] border transition-all hover:scale-[1.02] hover:shadow-lg shadow-slate-200/50 flex flex-col justify-center gap-1 md:gap-2",
                    slide.isLight ? "bg-white border-slate-200" : "bg-white/5 border-white/10"
@@ -444,10 +516,15 @@ export default function PresentationPage() {
                     <p className={cn("text-xs leading-tight font-semibold", slide.isLight ? "text-slate-500" : "text-white/60")}>
                       {s.d}
                     </p>
+                  </div>
+                ))}
+              </div>
+          )}
+
           {slide.id === 'security' && (
             <div className="grid md:grid-cols-2 gap-4 text-left items-center">
                <div className="space-y-2">
-                 {slide.points?.map((p, i) => (
+                 {slide.points?.map((p: any, i: number) => (
                    <div key={i} className={cn(
                      "flex items-center gap-2 p-2 rounded-lg border transition-colors",
                      slide.isLight ? "bg-slate-50 border-slate-200" : "bg-white/10 border-white/20"

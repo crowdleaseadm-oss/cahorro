@@ -92,10 +92,10 @@ export function DashboardHeader() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur-md">
-      <div className="flex h-16 items-center justify-between px-6">
+      <div className="flex h-12 items-center justify-between px-6">
         {/* Left side: Page Context */}
         <div className="flex items-center gap-4">
-          <h2 className="text-xl font-bold tracking-tight text-foreground">{getPageTitle()}</h2>
+          <h2 className="text-lg font-bold tracking-tight text-foreground">{getPageTitle()}</h2>
         </div>
 
         {/* Center/Right: Utility Links + Actions */}
@@ -154,7 +154,7 @@ export function DashboardHeader() {
                       {profile?.role === 'ceo' ? 'CEO' : profile?.role === 'admin' ? 'Administrador' : 'Ahorrista'}
                     </span>
                   </div>
-                  <Avatar className="h-9 w-9 border-2 border-primary/20 p-0.5 relative">
+                  <Avatar className="h-8 w-8 border-2 border-primary/20 p-0.5 relative">
                     <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} />
                     <AvatarFallback className="bg-primary/10 text-primary font-bold">
                       {(profile?.displayName || user?.email || 'U').charAt(0).toUpperCase()}
