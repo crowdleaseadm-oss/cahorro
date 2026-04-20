@@ -103,9 +103,9 @@ export default function ExplainerPage() {
   const slide = slides[currentSlide];
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 md:p-8 flex items-center justify-center pt-24">
+    <div className="min-h-screen bg-slate-50 py-[2cm] px-4 md:px-12 flex items-center justify-center pt-0">
       <div className={cn(
-        "relative w-full max-w-5xl aspect-video min-h-[500px] flex flex-col items-center justify-center overflow-hidden rounded-[3rem] border shadow-2xl transition-all duration-700",
+        "relative w-full max-w-4xl aspect-video min-h-[400px] flex flex-col items-center justify-center overflow-hidden rounded-[2.5rem] border shadow-xl transition-all duration-700",
         slide.bg
       )}>
         {/* Navigation Buttons */}
@@ -165,23 +165,21 @@ export default function ExplainerPage() {
              "flex flex-col items-center md:items-start justify-center flex-1 max-w-2xl",
              !slide.image && "md:items-center text-center"
            )}>
-             <div className={cn(
-               "mb-6 p-5 rounded-2xl bg-white shadow-lg transform transition-transform duration-500 hover:rotate-3",
-               slide.color
-             )}>
-               {slide.icon}
-             </div>
-             
-             <h1 className={cn(
-               "text-2xl md:text-4xl lg:text-5xl font-black mb-4 tracking-tight leading-tight",
-               slide.color
-             )}>
-               {slide.title}
-             </h1>
-             
-             <p className="text-lg md:text-xl lg:text-2xl font-bold text-slate-700 leading-snug">
-               {slide.description}
-             </p>
+              <div className={cn(
+                "mb-4 p-4 rounded-xl bg-white shadow-md transform transition-transform duration-500 hover:rotate-3",
+                slide.color
+              )}>
+                {React.cloneElement(slide.icon as React.ReactElement, { className: "h-10 w-10" })}
+              </div>
+                          <h1 className={cn(
+                "text-xl md:text-3xl lg:text-4xl font-black mb-3 tracking-tight leading-tight",
+                slide.color
+              )}>
+                {slide.title}
+              </h1>
+                          <p className="text-base md:text-lg lg:text-xl font-bold text-slate-700 leading-snug">
+                {slide.description}
+              </p>
 
 
 
@@ -194,13 +192,13 @@ export default function ExplainerPage() {
                </div>
              )}
 
-             {slide.cta && (
-               <div className="mt-8 animate-bounce w-full flex justify-center md:justify-start">
-                 <Button asChild size="lg" className="h-14 px-8 rounded-2xl text-lg font-black shadow-xl">
-                   <Link href="/explore">Ver planes reales <ArrowRight className="ml-2 h-5 w-5" /></Link>
-                 </Button>
-               </div>
-             )}
+                {slide.cta && (
+                <div className="mt-6 animate-bounce w-full flex justify-center md:justify-start">
+                  <Button asChild size="lg" className="h-12 px-8 rounded-xl text-base font-black shadow-lg">
+                    <Link href="/explore">Ver planes reales <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                  </Button>
+                </div>
+                )}
            </div>
         </div>
 
