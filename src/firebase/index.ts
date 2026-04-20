@@ -5,6 +5,8 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
 
+import { getStorage } from 'firebase/storage';
+
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
   if (!getApps().length) {
@@ -14,11 +16,14 @@ export function initializeFirebase() {
     // without arguments.
     let firebaseApp;
     try {
-      // Attempt to initialize via Firebase App Hosting environment variables
-      firebaseApp = initializeApp();
+      // Forzar el uso de la config local en desarrollo para evitar desajustes
+      if (process.env.NODE_ENV === "development" || typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+        firebaseApp = initializeApp(firebaseConfig);
+      } else {
+        // En producción, intentar primero la auto-inicialización de Firebase App Hosting
+        firebaseApp = initializeApp();
+      }
     } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
       if (process.env.NODE_ENV === "production") {
         console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
       }
@@ -33,10 +38,18 @@ export function initializeFirebase() {
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
+  let storage = null;
+  try {
+    storage = getStorage(firebaseApp);
+  } catch (e) {
+    console.error("Firebase Storage failed to initialize:", e);
+  }
+
   return {
     firebaseApp,
     auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
+    firestore: getFirestore(firebaseApp),
+    storage
   };
 }
 

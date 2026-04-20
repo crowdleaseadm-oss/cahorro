@@ -1,13 +1,15 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/dashboard/app-sidebar';
 import { FirebaseClientProvider } from '@/firebase';
-import { WhatsAppFloat } from '@/components/whatsapp-float';
+import { LayoutWrapper } from '@/components/layout/layout-wrapper';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
   title: 'Círculo de Ahorro | Tu comunidad financiera',
   description: 'Gestiona tus círculos de ahorro de forma segura y transparente.',
+  icons: {
+    icon: '/branding/Isotipo.svg',
+  }
 };
 
 export default function RootLayout({
@@ -20,21 +22,14 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;900&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased bg-background overflow-x-hidden" suppressHydrationWarning>
         <FirebaseClientProvider>
-          <SidebarProvider>
-            <div className="flex min-h-screen w-full relative">
-              <AppSidebar />
-              <SidebarInset className="flex-1 bg-background">
-                <main className="w-full h-full p-6 md:p-8 lg:p-10 transition-all duration-300">
-                  {children}
-                </main>
-              </SidebarInset>
-              <WhatsAppFloat />
-            </div>
-          </SidebarProvider>
+          <LayoutWrapper>
+            {children}
+          </LayoutWrapper>
+          <Toaster />
         </FirebaseClientProvider>
       </body>
     </html>

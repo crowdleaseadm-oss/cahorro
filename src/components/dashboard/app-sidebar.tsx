@@ -6,12 +6,18 @@ import {
   Home,
   LayoutDashboard,
   Search,
-  PiggyBank,
+  Layers,
   ShieldCheck,
   HelpCircle,
   LogOut,
   ChevronRight,
   TrendingUp,
+  CreditCard,
+  Building2,
+  Fingerprint,
+  FileText,
+  Handshake,
+  Shield
 } from "lucide-react"
 
 import {
@@ -29,27 +35,61 @@ import {
 } from "@/components/ui/sidebar"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useAuth, useUser } from "@/firebase"
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase"
+import { doc, serverTimestamp } from "firebase/firestore"
 import { signOut } from "firebase/auth"
+import { NotificationIndicator } from "./notification-indicator"
+import { BrandLogo } from "../brand/brand-logo"
 
-const navigation = [
-  { name: "Inicio", href: "/", icon: Home },
+const mainNavigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Explorar Círculos", href: "/explore", icon: Search },
-  { name: "Mis Círculos", href: "/my-circles", icon: PiggyBank },
+  { name: "Mis Círculos", href: "/my-circles", icon: Layers },
 ]
 
-const infoPages = [
-  { name: "Cómo Funciona", href: "/how-it-works", icon: TrendingUp },
-  { name: "Preguntas Frecuentes", href: "/faq", icon: HelpCircle },
-  { name: "Legal y Regulaciones", href: "/legal", icon: ShieldCheck },
+const securityNavigation = [
+  { name: "Verificación", href: "/verification", icon: Fingerprint },
+  { name: "Cuentas y Pagos", href: "/payment-methods", icon: Building2 },
+  { name: "Documentación", href: "/documentation", icon: FileText },
+  { name: "Contratos de Adhesión", href: "/contracts", icon: Handshake },
 ]
 
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const auth = useAuth()
+  const db = useFirestore()
   const { user } = useUser()
+
+  // Nuevo: Fetch del perfil para saber el rol
+  const userProfileRef = useMemoFirebase(() => (db && user ? doc(db, 'users', user.uid) : null), [db, user]);
+  const { data: profile } = useDoc(userProfileRef);
+
+  // Efecto para asegurar que el mail del administrador principal sea CEO
+  // Lo movemos aquí para que se asigne apenas inicie sesión y aparezca el link en el sidebar
+  React.useEffect(() => {
+    if (db && user && user.email === 'crowd.lease.adm@gmail.com') {
+      const needsInit = !profile || profile.role !== 'ceo';
+      
+      if (needsInit) {
+        console.log("Detectado Administrador Principal en Sidebar. Iniciando/Actualizando rol CEO...");
+        import('@/firebase/non-blocking-updates').then(({ setDocumentNonBlocking }) => {
+          setDocumentNonBlocking(doc(db, 'users', user.uid), { 
+            role: 'ceo',
+            displayName: profile?.displayName || 'Juan Manuel Correa Casabo',
+            dni: profile?.dni || '31693615',
+            phoneNumber: profile?.phoneNumber || '2236358121',
+            email: user.email,
+            documentId: 'AAA-000000', // ID Resguardado para el CEO
+            createdAt: profile?.createdAt || serverTimestamp(),
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        });
+      }
+    }
+  }, [db, user, profile]);
+
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'ceo';
 
   const handleLogout = async () => {
     try {
@@ -63,13 +103,13 @@ export function AppSidebar() {
   return (
     <Sidebar className="border-r border-border bg-white shadow-sm">
       <SidebarHeader className="p-6">
-        <Link href="/" className="flex items-center gap-2 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
-            <PiggyBank className="h-6 w-6" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-tight text-primary leading-none">Círculo</span>
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">de Ahorro</span>
+        <Link href="/" className="flex items-center group">
+          <div className="flex h-24 w-24 items-center justify-center shrink-0 py-2">
+            <img 
+              src="/branding/Isotipo.svg" 
+              alt="Círculo de Ahorro Logo" 
+              className="h-full w-full object-contain"
+            />
           </div>
         </Link>
       </SidebarHeader>
@@ -79,7 +119,7 @@ export function AppSidebar() {
           <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navigation.map((item) => (
+              {mainNavigation.map((item) => (
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton
                     asChild
@@ -99,10 +139,10 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Información</SidebarGroupLabel>
+          <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">Seguridad & Trámites</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {infoPages.map((item) => (
+              {securityNavigation.map((item) => (
                 <SidebarMenuItem key={item.name}>
                   <SidebarMenuButton
                     asChild
@@ -122,32 +162,10 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 mt-auto space-y-4">
-        <div className="rounded-2xl bg-accent/50 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className={`h-2 w-2 rounded-full ${user ? 'bg-primary animate-pulse' : 'bg-muted-foreground'}`} />
-            <span className="text-xs font-semibold text-primary">Panel Admin</span>
-          </div>
-          <SidebarMenuButton asChild className="w-full justify-between bg-white border border-border shadow-sm hover:shadow-md transition-all">
-            <Link href="/admin">
-              <div className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-primary" />
-                <span className="text-xs font-bold">Gestionar Grupos</span>
-              </div>
-              <ChevronRight className="h-3 w-3 text-muted-foreground" />
-            </Link>
-          </SidebarMenuButton>
-        </div>
-        
-        {user && (
-          <SidebarMenuButton 
-            className="w-full text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="font-medium">Cerrar Sesión</span>
-          </SidebarMenuButton>
-        )}
+      <SidebarFooter className="p-4 mt-auto">
+        <p className="text-[10px] text-center text-muted-foreground font-medium uppercase tracking-tighter">
+          Círculo de Ahorro &copy; {new Date().getFullYear()}
+        </p>
       </SidebarFooter>
     </Sidebar>
   )

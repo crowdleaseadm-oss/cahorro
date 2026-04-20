@@ -4,31 +4,31 @@
 
 @layer base {
   :root {
-    --background: 210 52% 96%;
-    --foreground: 222 47% 11%;
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --background: 210 17% 98%;      /* #F8F9FA - Blanco Nieve */
+    --foreground: 219 100% 18%;     /* #001F5B - Azul Marino (Títulos) */
+    --card: 0 0% 100%;             /* #FFFFFF */
+    --card-foreground: 219 100% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 211 79% 51%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 184 74% 76%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 184 74% 94%;
-    --accent-foreground: 211 79% 51%;
+    --popover-foreground: 219 100% 18%;
+    --primary: 219 100% 18%;        /* #001F5B - Azul Marino */
+    --primary-foreground: 210 17% 98%;
+    --secondary: 160 100% 30%;      /* #009966 - Verde Esmeralda */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 17% 94%;
+    --muted-foreground: 208 7% 46%; /* #6C757D - Gris Ceniza */
+    --accent: 160 100% 30%;         /* Emerald for highlights */
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 211 79% 51%;
-    --radius: 0.75rem;
-    --chart-1: 211 79% 51%;
-    --chart-2: 184 74% 76%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
+    --border: 219 100% 18% / 0.1;   /* Navy with opacity for borders */
+    --input: 219 100% 18% / 0.1;
+    --ring: 160 100% 30%;           /* Emerald for focus rings */
+    --radius: 1.5rem;
+    --chart-1: 219 100% 18%;
+    --chart-2: 160 100% 30%;
+    --chart-3: 208 7% 46%;
+    --chart-4: 215 20% 65%;
+    --chart-5: 222 47% 11%;
   }
   .dark {
     --background: 222 47% 11%;
@@ -59,5 +59,20 @@
   }
   body {
     @apply bg-background text-foreground font-body;
+  }
+
+  /* Custom Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+  }
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
   }
 }

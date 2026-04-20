@@ -6,8 +6,8 @@ import Link from "next/link"
 export default function HowItWorks() {
   const steps = [
     {
-      title: "Únete a un Círculo",
-      description: "Explora y elige un grupo que se adapte a tu meta de ahorro mensual y capital final deseado.",
+      title: "Unite a un Grupo",
+      description: "Elegí el grupo que más te sirva según lo que podés pagar por mes y la plata que necesitás recibir.",
       icon: Users,
       color: "text-blue-500",
       bg: "bg-blue-50"
@@ -20,8 +20,8 @@ export default function HowItWorks() {
       bg: "bg-accent"
     },
     {
-      title: "Adjudicación",
-      description: "Recibe el capital total acumulado del mes mediante sorteo o licitación. ¡Sin intereses bancarios!",
+      title: "Momento de cobrar",
+      description: "Recibí el monto total del plan mediante sorteo o licitación. ¡Sin intereses bancarios!",
       icon: TrendingUp,
       color: "text-secondary-foreground",
       bg: "bg-secondary"
@@ -36,7 +36,7 @@ export default function HowItWorks() {
   ]
 
   return (
-    <div className="space-y-12 max-w-5xl mx-auto">
+    <div className="space-y-12 max-w-5xl mx-auto pt-24 pb-12 px-6">
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl">¿Cómo Funciona?</h1>
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -85,7 +85,7 @@ export default function HowItWorks() {
         <h2 className="text-3xl font-bold mb-4">¿Listo para comenzar?</h2>
         <p className="mb-8 opacity-90 text-lg">Únete hoy a miles de personas que están alcanzando sus metas.</p>
         <Button asChild size="lg" className="h-14 px-12 text-lg font-bold rounded-2xl shadow-xl shadow-primary/20">
-          <Link href="/explore">Ver círculos disponibles</Link>
+          <Link href="/explore">Ver planes disponibles</Link>
         </Button>
       </div>
     </div>

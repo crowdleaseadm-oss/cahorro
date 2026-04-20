@@ -27,11 +27,15 @@ export default function FAQPage() {
     {
       q: "¿Las cuotas son fijas?",
       a: "Las cuotas se calculan en USD y se abonan en dicha moneda o su equivalente en moneda local al tipo de cambio del día de pago, asegurando que el capital final no pierda valor adquisitivo durante el plazo."
+    },
+    {
+      q: "¿Qué necesito para empezar a unirme a un grupo?",
+      a: "Para unirte a cualquier grupo de ahorro y realizar el pago de la primera cuota, es obligatorio completar el proceso de verificación de identidad (KYC) y que tu cuenta sea validada por nuestro equipo administrativo. Este proceso asegura la legalidad y transparencia de todo el círculo."
     }
   ]
 
   return (
-    <div className="max-w-4xl mx-auto space-y-12 pb-20">
+    <div className="max-w-4xl mx-auto space-y-12 pt-24 pb-20 px-6">
       <div className="text-center space-y-4">
         <div className="inline-flex items-center justify-center p-4 rounded-3xl bg-primary/10 text-primary mb-2">
           <HelpCircle className="h-12 w-12" />
