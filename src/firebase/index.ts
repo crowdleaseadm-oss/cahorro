@@ -16,15 +16,19 @@ export function initializeFirebase() {
     // without arguments.
     let firebaseApp;
     try {
-      // Forzar el uso de la config local en desarrollo para evitar desajustes
-      if (process.env.NODE_ENV === "development" || typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+      // Forzar el uso de la config local en desarrollo o ambientes no-Firebase (como Vercel)
+      const isDevelopment = process.env.NODE_ENV === "development";
+      const isLocalhost = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+      const isVercel = process.env.VERCEL === "1" || process.env.NEXT_PUBLIC_VERCEL_ENV !== undefined;
+
+      if (isDevelopment || isLocalhost || isVercel) {
         firebaseApp = initializeApp(firebaseConfig);
       } else {
-        // En producción, intentar primero la auto-inicialización de Firebase App Hosting
+        // En producción real (Firebase App Hosting), intentar auto-inicialización
         firebaseApp = initializeApp();
       }
     } catch (e) {
-      if (process.env.NODE_ENV === "production") {
+      if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
         console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
       }
       firebaseApp = initializeApp(firebaseConfig);

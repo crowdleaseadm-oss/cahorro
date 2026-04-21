@@ -123,6 +123,7 @@ export default function AdminPage() {
   });
   
   const circlesRef = useMemoFirebase(() => (db && user ? collection(db, 'saving_circles') : null), [db, user]);
+  const { data: circlesList, isLoading: circlesLoading } = useCollection(circlesRef);
   const MOCK_CIRCLES = useMemo(() => [
     { id: 'DEMO01', name: '$ 2.000', targetCapital: 2000, totalInstallments: 12, currentMemberCount: 12, memberCapacity: 24, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString(), adminVatApplied: true, subscriptionVatApplied: true, lifeInsuranceVatApplied: false, isRecurrent: false, moraRate: 3, bidCommissionRate: 3, installmentDueDay: 5, accumulatedCommonFund: 0 },
     { id: 'DEMO02', name: '$ 5.000', targetCapital: 5000, totalInstallments: 36, currentMemberCount: 67, memberCapacity: 72, subscriptionFeeRate: 3, administrativeFeeRate: 10, lifeInsuranceRate: 0.09, drawMethodCount: 1, bidMethodCount: 1, status: 'Active', isPrivate: false, creationDate: new Date().toISOString(), adminVatApplied: true, subscriptionVatApplied: true, lifeInsuranceVatApplied: false, isRecurrent: false, moraRate: 3, bidCommissionRate: 3, installmentDueDay: 5, accumulatedCommonFund: 0 },
